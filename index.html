@@ -465,6 +465,25 @@ function renderProduction(){if(!prodState.loaded)return;const date=$('prodDate')
  const prefix=date.slice(0,7),weeks=new Map();for(const [d,n] of prodState.daily){if(!d.startsWith(prefix))continue;const week=Math.floor((Number(d.slice(-2))-1)/7)+1;weeks.set(week,(weeks.get(week)||0)+n)}drawProdHorizontal('prodMonth',[1,2,3,4,5].filter(w=>weeks.has(w)).map(w=>({label:'Semana '+w,value:weeks.get(w)})));
 }
 $('prodDate').value=localDay(new Date());$('prodDate').addEventListener('change',loadProduction);$('prodReload').addEventListener('click',loadProduction);
+// Actualización automática: al cambiar de día y cada minuto mientras se ven las gráficas.
+let lastAutoProductionDay=localDay(new Date());
+let productionRefreshing=false;
+async function autoRefreshProduction(){
+ if(!role||document.hidden)return;
+ const today=localDay(new Date());
+ const dayChanged=today!==lastAutoProductionDay;
+ if(dayChanged){lastAutoProductionDay=today;$('prodDate').value=today;}
+ if($('productionPanel').style.display!=='block'||productionRefreshing)return;
+ productionRefreshing=true;
+ try{
+  // Releer vehículos y defectos para mantener actualizados también los indicadores.
+  await load();
+  await loadProduction();
+ }finally{productionRefreshing=false;}
+}
+setInterval(autoRefreshProduction,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoRefreshProduction();});
+
 $('prodSaveGoal').addEventListener('click',async()=>{if(!canEditProduction){msg('prodMessage','Solo el Administrador, Manager y Jefe de Taller pueden guardar previsiones.',true);return}const date=$('prodDate').value,raw=$('prodGoal').value;if(!date||raw===''||!/^\d+$/.test(raw)||Number(raw)>500){msg('prodMessage','Introduce una previsión entre 0 y 500 vehículos.',true);return}const btn=$('prodSaveGoal');btn.disabled=true;try{const {error}=await supabase.from('ebro_previsiones_diarias').upsert({fecha:date,objetivo:Number(raw),actualizado_por:(await supabase.auth.getUser()).data.user?.id},{onConflict:'fecha'});if(error)throw error;await loadProduction();msg('prodMessage','Previsión guardada correctamente para '+date+'.')}catch(err){msg('prodMessage','No se pudo guardar la previsión: '+err.message,true)}finally{btn.disabled=false}});
 
 $('refresh').addEventListener('click',load);for(const id of ['search','modelFilter','statusFilter','trimFilter','colorFilter','locationFilter'])$(id).addEventListener(id==='search'?'input':'change',()=>{currentPage=1;render()});
