@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EBRO Vehicle Control 4.5 · Entradas y salidas</title><style>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EBRO Vehicle Control 4.8 · Entradas y salidas</title><style>
 :root{font-family:system-ui,Arial,sans-serif;color:#142b29;background:#f3f6f5}*{box-sizing:border-box}body{margin:0}header{background:#123d36;color:white;padding:17px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px}header h1{font-size:21px;margin:0}main{max-width:1100px;margin:25px auto;padding:0 15px}.card{background:white;border-radius:14px;padding:22px;margin-bottom:17px;box-shadow:0 2px 12px #102b2112}h2{margin-top:0;font-size:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}label{display:block;font-size:13px;font-weight:650;margin-bottom:5px}input,select,textarea{width:100%;padding:11px;border:1px solid #b9cbc5;border-radius:8px;font:inherit;background:white}textarea{min-height:80px}button{background:#137d62;color:white;border:0;border-radius:8px;padding:11px 17px;cursor:pointer;font-weight:700}button:disabled{opacity:.5;cursor:not-allowed}.ocr-preview{max-width:100%;max-height:270px;border-radius:9px;display:none;margin:10px 0}.ocr-panel{background:#edf6f2;padding:15px;border-radius:12px;margin-bottom:18px}.ocr-actions{display:flex;gap:9px;flex-wrap:wrap}.ocr-review{display:none;border:1px solid #b4d5c6;padding:13px;border-radius:9px;margin-top:12px}.secondary{background:#e4eee9;color:#154b3d}.danger{background:#9b3434}.muted{color:#61746c;font-size:13px}.error{color:#a12d2d}.ok{color:#146746}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.toolbar input{flex:1;min-width:180px}.vehicle{border:1px solid #dce6e1;border-radius:10px;padding:14px;margin:10px 0}.vehicle h3{margin:0 0 6px}.vehicle-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.role-note{font-weight:600}.pill{background:#e2f0e9;border-radius:30px;padding:4px 9px;font-size:12px}#app,#userPanel,#workersPanel{display:none}.worker-note{background:#edf6f2;border-radius:9px;padding:12px}.worker-form-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}#message{margin:10px 0}small{display:block;color:#61746c;margin-top:5px}@media(max-width:600px){.grid{grid-template-columns:1fr}header h1{font-size:17px}.card{padding:16px}}
 .defect-panel{margin-top:14px;padding-top:12px;border-top:1px solid #dce6e1}.defect-panel h4{margin:0 0 8px}.defect-item{padding:10px;margin:8px 0;background:#f3f6f5;border-radius:9px}.defect-add{margin-top:12px;padding:12px;background:#edf6f2;border-radius:9px}.defect-add textarea{margin:7px 0}.defect-add button{margin-top:4px}
 :root{font-family:Inter,system-ui,Arial,sans-serif;color:#14223c;background:#f3f6fc}header{background:#081d3e;padding:16px 25px;position:sticky;top:0;z-index:5;box-shadow:0 3px 15px #071e3622}header h1{font-size:25px;letter-spacing:.06em}main{max-width:1800px;margin:0 auto;padding:18px}#app{display:none;grid-template-columns:210px minmax(0,1fr);gap:18px;align-items:start}.app-nav{position:sticky;top:83px;background:#0c2345;color:white;border-radius:16px;padding:17px 10px;min-height:75vh;box-shadow:0 6px 24px #13294a22}.nav-brand{text-align:center;font-size:29px;font-weight:850;letter-spacing:.13em;margin:12px 0 28px}.nav-brand small{font-size:12px;color:#b5c7e3;letter-spacing:0;margin:0}.nav-link{display:block;width:100%;text-align:left;background:transparent;color:#e5edfa;padding:14px 10px;margin-bottom:8px;font-size:13px;border-radius:9px}.nav-link:hover,.nav-link.active{background:#1557ce;color:#fff}.app-content{min-width:0;display:flex;flex-direction:column;gap:17px}.card{border:1px solid #e2e9f5;border-radius:17px;box-shadow:0 5px 20px #102d5010;margin-bottom:0;padding:22px}.dashboard{order:-1}.dashboard-title{font-size:25px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.dashboard-subtitle{font-size:13px;font-weight:400;color:#70809c}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:19px 0}.stat{border-radius:14px;padding:17px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}.stat span{font-size:15px;font-weight:650}.stat strong{font-size:33px}.stat-total{background:#e6efff;color:#1246ac}.stat-progress{background:#fff1d7;color:#9d5b06}.stat-done{background:#e2f8ea;color:#08743b}.searchbar{margin:17px 0 23px}.searchbar input{flex:2;min-width:200px}.searchbar select{width:auto;min-width:160px;flex:1}.searchbar button{white-space:nowrap}.listing-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.listing-head h2{font-size:19px}.vehicles-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.vehicle{margin:0;border:1px solid #e0e7f1;border-left:5px solid #2b6ce5;border-radius:14px;padding:17px;background:#fff;min-width:0;box-shadow:0 3px 9px #102d5010}.vehicle.status-progress{border-left-color:#f1a42c}.vehicle.status-done{border-left-color:#20ad65}.vehicle.status-none{border-left-color:#377ff1}.vehicle h3{font-size:21px;margin:0 0 8px}.vehicle .vehicle-meta{display:grid;gap:5px;font-size:13px;color:#34455e}.vehicle .vehicle-meta b{color:#132b52}.vehicle .vehicle-top{display:flex;align-items:start;justify-content:space-between;gap:8px}.status-pill{font-size:11px;font-weight:750;white-space:nowrap;padding:6px 9px;border-radius:99px;background:#e4efff;color:#1451ad}.status-progress .status-pill{background:#fff0d1;color:#945500}.status-done .status-pill{background:#dcf7e5;color:#086d35}.defect-panel{border-top:1px solid #e7edf6;margin-top:12px;padding-top:12px}.defect-panel h4{font-size:13px}.defect-item{background:#f6f8fc;font-size:13px}.defect-item strong{display:block;overflow-wrap:anywhere}.defect-add{background:#eef5ff}.vehicle-actions button{font-size:12px;padding:8px 11px}.vehicle-actions select{font-size:12px;padding:7px}.pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 3px;flex-wrap:wrap}.pagination button{background:#1557ce;padding:8px 14px}.pagination button:disabled{background:#aebbd1}.pagination .muted{font-size:13px}.worker-note,.ocr-panel{background:#eef5ff}.secondary{background:#e7eef9;color:#16467f}button:not(.nav-link):not(.danger){transition:filter .15s}button:hover{filter:brightness(.95)}input:focus,select:focus,textarea:focus{outline:2px solid #4b88ee;outline-offset:1px}#vehicleSection{order:1}#workersPanel{order:2}@media(max-width:1350px){.vehicles-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:950px){#app{grid-template-columns:1fr}.app-nav{position:static;min-height:auto;display:flex;gap:7px;align-items:center;overflow:auto}.nav-brand{font-size:18px;margin:0 10px 0 0;white-space:nowrap}.nav-brand small{font-size:10px}.nav-link{white-space:nowrap;width:auto;margin:0;padding:10px}.stats{gap:7px}.stat{padding:12px}.stat span{font-size:12px}.stat strong{font-size:25px}}@media(max-width:620px){main{padding:10px}.card{padding:14px}.vehicles-grid,.stats{grid-template-columns:1fr}.stat{flex-direction:row}.searchbar select{min-width:130px}.dashboard-title{font-size:21px}.app-nav{padding:8px}.nav-brand{display:none}}
@@ -127,7 +127,7 @@ main{max-width:none;padding:0 18px 22px;margin:0 auto}
 .date-editor{padding:12px;margin:10px 0;background:#f2f3f4;border:1px solid #d2d5d9;border-radius:9px}
 .date-editor .grid{gap:9px}.date-editor button{margin-top:8px}
 @media(max-width:650px){.movement-cards{grid-template-columns:1fr}}
-</style></head><body><header><h1>EBRO <span style="font-size:13px;font-weight:500;opacity:.8">Vehicle Control 4.5 · Entradas y salidas</span></h1><div id="userPanel"><span id="userEmail" style="font-size:12px"></span> <button class="secondary" id="logout">Salir</button></div></header><main>
+</style></head><body><header><h1>EBRO <span style="font-size:13px;font-weight:500;opacity:.8">Vehicle Control 4.8 · Entradas y salidas</span></h1><div id="userPanel"><span id="userEmail" style="font-size:12px"></span> <button class="secondary" id="logout">Salir</button></div></header><main>
 <section class="card" id="login"><h2>🔐 Entrar en EBRO Control</h2><p class="muted">Introduce tu usuario y contraseña. No necesitas escribir ningún correo electrónico.</p><form id="loginForm"><div class="grid"><div><label for="email">Usuario</label><input id="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required placeholder="Ej. juan"><small>Escribe el usuario que te ha facilitado el administrador.</small></div><div><label for="password">Contraseña</label><input id="password" type="password" autocomplete="current-password" required placeholder="Tu contraseña"></div></div><p><button id="loginBtn" type="submit">ENTRAR</button></p></form><div id="loginMessage" role="status"></div></section>
 <section id="app">
 <nav class="app-nav" aria-label="Navegación"><button type="button" class="nav-link active" data-target="dashboard">⌂ &nbsp; Vehículos</button><button type="button" class="nav-link" data-target="vehicleSection">⊞ &nbsp; Registrar vehículo</button><button type="button" class="nav-link" data-target="productionPanel" id="productionNav">▥ &nbsp; Previsión y producción</button><button type="button" class="nav-link" data-target="workersPanel" id="workersNav">♙ &nbsp; Usuarios</button></nav>
@@ -145,7 +145,7 @@ main{max-width:none;padding:0 18px 22px;margin:0 auto}
 <div class="stats"><div class="stat stat-total"><span>🚗 Vehículos totales</span><strong id="totalCount">0</strong></div><div class="stat stat-progress"><span>🔧 Pendientes</span><strong id="progressCount">0</strong></div><div class="stat stat-done"><span>✅ Terminados</span><strong id="doneCount">0</strong></div></div>
 <div class="toolbar searchbar"><input id="search" aria-label="Buscar vehículos" placeholder="🔎 Buscar unidad, modelo, color, ubicación o defecto..."><select id="modelFilter" aria-label="Filtrar por modelo"><option value="">Todos los modelos</option><option>S400 HEV</option><option>S700 HEV</option><option>S700 PHEV</option><option>S800 PHEV</option><option>S900 PHEV</option></select><select id="statusFilter" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="Pendiente">Pendiente</option><option value="Terminado">Terminado</option><option value="Sin defectos">Sin defectos</option></select><button id="refresh" class="secondary">↻ Actualizar</button></div>
 <div class="extra-filters"><label>Acabado<select id="trimFilter"><option value="">Todos</option></select></label><label>Color<select id="colorFilter"><option value="">Todos</option></select></label><label>Defecto<input id="defectFilter" placeholder="Buscar defecto..." autocomplete="off"></label><label>Ubicación<select id="locationFilter"><option value="">Todas</option></select></label></div><div class="listing-head"><h2>Vehículos registrados</h2><span id="listMessage" class="muted"></span></div><div id="vehicles" class="vehicles-grid"></div><div id="pagination" class="pagination"></div></div></div></section>
-<p class="muted">Versión 4.5 conectada a Supabase. Requiere internet. Los permisos se aplican en la base de datos mediante RLS; los cambios de estado requieren las políticas correspondientes. La fotografía de la etiqueta se usa para reconocer datos, pero no se sube ni almacena en Supabase. Incluye gestión de defectos y registro de reparaciones. Las fotografías OCR no se almacenan.</p></main>
+<p class="muted">Versión 4.8 conectada a Supabase. Requiere internet. Los permisos se aplican en la base de datos mediante RLS; los cambios de estado requieren las políticas correspondientes. La fotografía de la etiqueta se usa para reconocer datos, pero no se sube ni almacena en Supabase. Incluye gestión de defectos y registro de reparaciones. Las fotografías OCR no se almacenan.</p></main>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const URL='https://howmudtxhfsjtoypuyzg.supabase.co';
@@ -159,26 +159,117 @@ $('cancelOcr').addEventListener('click',()=>{if(photoUrl)window.URL.revokeObject
 $('confirmOcr').addEventListener('click',()=>{ocrConfirmed=true;$('ocrReview').style.display='none';ocrMsg('Datos confirmados. Completa Zona, Fila y Plaza y pulsa «Guardar vehículo».')});
 function normalizeOcr(text){return text.toUpperCase().replace(/[\u00A0]/g,' ').replace(/\s+/g,' ')}
 function readCode(text){
- const t=normalizeOcr(text).replace(/[\u2013\u2014]/g,'-');
- // El identificador principal de fábrica es B seguido de seis cifras.
- const match=t.match(/\bB[\s-]*[0-9OIL]{6}\b/);
- if(!match)return null;
- const code=match[0].replace(/[\s-]/g,'').replace(/O/g,'0').replace(/I/g,'1').replace(/L/g,'1');
- return /^B\d{6}$/.test(code)?code:null;
+ // La unidad principal está en la parte superior. Su longitud puede crecer.
+ const lines=String(text).toUpperCase().split(/\r?\n/).slice(0,12);
+ for(const line of lines){
+  const compact=line.replace(/[\s:._-]/g,'').replace(/[OQ]/g,'0').replace(/[IL|]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
+  const match=compact.match(/(?:^|[^A-Z0-9])([BD]\d{4,12})(?![A-Z0-9])/);
+  if(match)return match[1];
+ }
+ return null;
+}
+function readCodeTop(text){
+ const lines=String(text).toUpperCase().split(/\r?\n/);
+ const candidates=[];
+ for(const line of lines){
+  const clean=line.replace(/[\s:._-]/g,'').replace(/[OQ]/g,'0').replace(/[IL|]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
+  for(const m of clean.matchAll(/(?:^|[^A-Z0-9])([BD]\d{4,12})(?![A-Z0-9])/g))candidates.push(m[1]);
+ }
+ return candidates.sort((a,b)=>b.length-a.length)[0]||null;
+}
+function cropCanvas(source,x,y,w,h,scale=2){
+ const c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(h*scale);
+ c.getContext('2d').drawImage(source,x,y,w,h,0,0,c.width,c.height);return c;
 }
 function readModel(text){const t=normalizeOcr(text);const match=t.match(/S\s*(400|700|800|900)\s*(HEV|PHEV)/);if(!match)return null;const model='S'+match[1]+' '+match[2];return [...$('modelo').options].some(o=>o.value===model)?model:null}
 function readTrim(text){const t=normalizeOcr(text);const trims=['EXCELLENCE','LUXURY','PREMIUM','COMFORT','ELEGANCE'];return trims.find(x=>t.includes(x))||null}
 function readVin(text){
- // Buscar únicamente una cadena VIN de 17 caracteres; nunca confundir los 6 finales con la unidad.
- const t=text.toUpperCase().replace(/[\u00a0]/g,' ');
- const matches=t.match(/\b[A-HJ-NPR-Z0-9]{17}\b/g)||[];
- return matches.find(v=>/[A-Z]/.test(v)&&/\d/.test(v))||null;
+ // Preferir el VIN situado junto a "Codigo VIN"; evitar confundirlo con el motor o la caja.
+ const lines=String(text).toUpperCase().split(/\r?\n/);
+ const valid=v=>/^[A-HJ-NPR-Z0-9]{17}$/.test(v)&&/[A-Z]/.test(v)&&/\d/.test(v);
+ const extracts=line=>{const compact=line.replace(/[^A-Z0-9]/g,'');const out=[];for(let i=0;i+17<=compact.length;i++){const v=compact.slice(i,i+17);if(valid(v))out.push(v)}return out};
+ const labelIndex=lines.findIndex(l=>/C[OÓ0]DIGO\s*VIN|COD\s*VIN/.test(l));
+ if(labelIndex>=0){for(let j=labelIndex+1;j<=Math.min(labelIndex+4,lines.length-1);j++){const found=extracts(lines[j]);if(found.length)return found[0]}}
+ // Los VIN EBRO de esta etiqueta comienzan por UA; no aceptar como VIN el numero del motor.
+ for(const line of lines){const compact=line.replace(/[^A-Z0-9]/g,'');for(let i=0;i+17<=compact.length;i++){const v=compact.slice(i,i+17);if(valid(v)&&v.startsWith('UA'))return v}}
+ return null;
 }
-function readColor(text){const t=normalizeOcr(text);const known=['CARBON CRYSTAL BLACK','CRYSTAL BLACK','WHITE','BLACK','SILVER','GREY','GRAY','BLUE','RED','GREEN'];const found=known.find(c=>t.includes(c));return found==='CARBON CRYSTAL BLACK'?'Carbon Crystal Black':found?found.charAt(0)+found.slice(1).toLowerCase():null}
+function readColor(text){
+ // Priorizar el campo COLOR de la diana; no confundir otros textos con el color.
+ const lines=String(text||'').toUpperCase().replace(/\r/g,'').split('\n');
+ const normalize=s=>s.replace(/\bBITONE\b|\bBI[\s-]?TONE\b|\bBICOLOR\b|\bBI[\s-]?COLOR\b/g,'BITONE')
+  .replace(/\bGR[AÁ]Y\b/g,'GREY').replace(/\bBL[A4]CK\b/g,'BLACK')
+  .replace(/\bWH[I1]TE\b/g,'WHITE').replace(/[|]/g,'I')
+  .replace(/\s*(?:&|\+|\/|\bAND\b|\bY\b)\s*/g,' & ').replace(/\s+/g,' ').trim();
+ const pretty=s=>s.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase());
+ const extract=s=>{
+  const v=normalize(s).replace(/^(?:COLOR|COLOUR|COLO[R]?|PINTURA)\s*[:\-]?\s*/,'').trim();
+  const two=v.match(/(?:BITONE\s*[:\-]?\s*)?([A-Z]+(?:\s+[A-Z]+){0,2})\s*&\s*([A-Z]+(?:\s+[A-Z]+){0,2})/);
+  const colors=['BLACK','WHITE','RED','GREY','SILVER','BLUE','GREEN','BAMBOO','PHANTOM','CARBON','CRYSTAL'];
+  if(two){
+   const cleanSide=s=>s.split(/\s+/).filter(w=>colors.includes(w)).join(' ');
+   const a=cleanSide(two[1]),b=cleanSide(two[2]);
+   if(a&&b)return 'Bitone: '+pretty(a)+' & '+pretty(b);
+  }
+  // Si aparece BITONE pero falta algún color, no inventar un monocolor.
+  if(/\bBITONE\b/.test(v))return null;
+  const known=['PHANTOM GREY','CARBON CRYSTAL BLACK','CRYSTAL BLACK','GREEN BAMBOO','BAMBOO GREEN','WHITE','BLACK','SILVER','GREY','BLUE','RED','GREEN'];
+  const found=known.find(c=>new RegExp('\\b'+c+'\\b').test(v));
+  return found?pretty(found):null;
+ };
+ // Primero el campo identificado como color y las líneas inmediatamente siguientes.
+ for(let i=0;i<lines.length;i++){
+  if(/\b(?:COLOR|COLOUR|PINTURA)\b/.test(lines[i])){
+   const after=lines[i].replace(/^.*?\b(?:COLOR|COLOUR|PINTURA)\b\s*[:\-]?\s*/,'');
+   for(const s of [after,lines[i+1]||'',after+' '+(lines[i+1]||'')]){
+    const color=extract(s);if(color)return color;
+   }
+  }
+ }
+ // En algunos OCR se pierde la palabra COLOR; aceptar bitono explícito.
+ const all=normalize(text);
+ const bitone=all.match(/\bBITONE\s*[:\-]?\s*([A-Z]+)\s*&\s*([A-Z]+)/);
+ if(bitone)return 'Bitone: '+pretty(bitone[1])+' & '+pretty(bitone[2]);
+ return null;
+}
+async function prepareOcrImage(file){
+ const bmp=await createImageBitmap(file);try{const scale=Math.min(2.5,2600/Math.max(bmp.width,bmp.height));const canvas=document.createElement('canvas');canvas.width=Math.round(bmp.width*scale);canvas.height=Math.round(bmp.height*scale);const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(bmp,0,0,canvas.width,canvas.height);return canvas}finally{bmp.close()}
+}
 function updateVinSuffix(){const vin=$('vin').value.trim().toUpperCase();$('vin').value=vin;$('vinUltimos').value=/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)?vin.slice(-6):''}
 $('vin').addEventListener('input',updateVinSuffix);
 async function loadOcrLibrary(){if(window.Tesseract)return window.Tesseract;await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('No se pudo cargar el lector OCR. Comprueba la conexión.'));document.head.append(script)});if(!window.Tesseract)throw new Error('El lector OCR no está disponible');return window.Tesseract}
-$('readLabel').addEventListener('click',async()=>{const f=$('labelPhoto').files[0];if(!f){ocrMsg('Primero haz o selecciona una fotografía.',true);return}const btn=$('readLabel');btn.disabled=true;$('ocrReview').style.display='none';ocrConfirmed=false;let worker;try{ocrMsg('Cargando reconocimiento OCR gratuito...');const Tesseract=await loadOcrLibrary();worker=await Tesseract.createWorker('eng');ocrMsg('Leyendo la fotografía...');const result=await worker.recognize(f);const text=result?.data?.text||'';const code=readCode(text),model=readModel(text),color=readColor(text),trim=readTrim(text),vin=readVin(text);if(code)$('unidad').value=code;if(model)$('modelo').value=model;if(color)$('color').value=color;if(trim)$('acabado').value=trim.charAt(0)+trim.slice(1).toLowerCase();if(vin){$('vin').value=vin;updateVinSuffix()}const count=[code,model,color,trim,vin].filter(Boolean).length;if(!count){ocrMsg('No se ha podido identificar la etiqueta. Haz otra foto con buena luz o introduce los datos manualmente.',true);return}ocrMsg('Lectura provisional: '+(code?'Unidad '+code+'. ':'Código de unidad no encontrado. ')+(model?'Modelo '+model+'. ':'Modelo no encontrado. ')+(color?'Color '+color+'. ':'Color no encontrado. ')+(trim?'Acabado '+trim+'. ':'Acabado no encontrado. ')+(vin?'VIN '+vin+'. ':'VIN no encontrado. ')+'Comprueba y confirma.');$('ocrReview').style.display='block';$('unidad').focus();if(code)await checkUnit()}catch(err){ocrMsg('Error OCR: '+err.message+'. Puedes introducir los datos manualmente.',true)}finally{if(worker)await worker.terminate().catch(()=>{});btn.disabled=false}});
+$('readLabel').addEventListener('click',async()=>{
+ const f=$('labelPhoto').files[0];if(!f){ocrMsg('Primero haz o selecciona una fotografía.',true);return}
+ const btn=$('readLabel');btn.disabled=true;$('ocrReview').style.display='none';ocrConfirmed=false;let worker;
+ try{
+  ocrMsg('Cargando reconocimiento OCR gratuito...');const Tesseract=await loadOcrLibrary();worker=await Tesseract.createWorker('eng');
+  ocrMsg('Leyendo diana EBRO...');const canvas=await prepareOcrImage(f);
+  const result=await worker.recognize(canvas);let text=result?.data?.text||'';
+  let code=null,model=readModel(text),color=readColor(text),trim=readTrim(text),vin=readVin(text);
+  // Leer por separado la zona superior de la diana: impide confundirla con
+  // el identificador inferior, que suele ser parte del VIN.
+  const upper=cropCanvas(canvas,0,0,canvas.width,Math.round(canvas.height*.42),1.8);
+  const upperResult=await worker.recognize(upper);
+  code=readCodeTop(upperResult?.data?.text||'');
+  // Si la foto contiene mucha carrocería, probar también la imagen completa;
+  // nunca tomar el código inferior como unidad automáticamente.
+  if(!code)code=readCode(text);
+  if(!code||!vin){
+   ocrMsg('Comprobando unidad y VIN en una segunda lectura...');
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+   for(let i=0;i<pixels.data.length;i+=4){const v=.299*pixels.data[i]+.587*pixels.data[i+1]+.114*pixels.data[i+2];const enhanced=v>175?255:v<85?0:(v-85)*255/90;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=enhanced}
+   ctx.putImageData(pixels,0,0);
+   const retry=await worker.recognize(canvas);const second=retry?.data?.text||'';
+   if(!code){const upper2=cropCanvas(canvas,0,0,canvas.width,Math.round(canvas.height*.42),1.8);const r2=await worker.recognize(upper2);code=readCodeTop(r2?.data?.text||'')||readCode(second)}
+   vin=vin||readVin(second);model=model||readModel(second);color=color||readColor(second);trim=trim||readTrim(second);
+  }
+  if(code)$('unidad').value=code;if(model)$('modelo').value=model;if(color)$('color').value=color;if(trim)$('acabado').value=trim.charAt(0)+trim.slice(1).toLowerCase();if(vin){$('vin').value=vin;updateVinSuffix()}
+  const count=[code,model,color,trim,vin].filter(Boolean).length;
+  if(!count){ocrMsg('No se ha podido identificar la diana. Acerca la cámara, evita reflejos y asegúrate de que se vean completos B y Código VIN.',true);return}
+  ocrMsg('Lectura provisional: '+(code?'Unidad '+code+'. ':'⚠ Unidad NO reconocida. ')+(vin?'VIN '+vin+'. ':'⚠ VIN NO reconocido. ')+(model?'Modelo '+model+'. ':'')+(color?'Color '+color+'. ':'')+'Comprueba cada carácter antes de confirmar.');
+  $('ocrReview').style.display='block';$('unidad').focus();if(code)await checkUnit();
+ }catch(err){ocrMsg('Error OCR: '+err.message+'. Puedes introducir los datos manualmente.',true)}finally{if(worker)await worker.terminate().catch(()=>{});btn.disabled=false}
+});
 
 function resetExisting(){existingId=null;checkedUnit='';$('formHeading').textContent=canCreate?'Registrar vehículo':'Modificar vehículo existente';$('saveBtn').textContent=canCreate?'Guardar vehículo':'Selecciona una unidad existente';$('existingNotice').textContent='Introduce o fotografía una unidad para comprobar si ya existe.'}
 function applyExisting(v){
