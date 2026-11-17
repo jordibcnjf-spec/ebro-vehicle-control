@@ -414,7 +414,7 @@ $('cancelOcr').addEventListener('click',()=>{if(photoUrl)window.URL.revokeObject
 $('confirmOcr').addEventListener('click',()=>{ocrConfirmed=true;$('ocrReview').style.display='none';ocrMsg('Datos confirmados. Revisa los datos y pulsa «Guardar vehículo».')});
 function normalizeOcr(text){return text.toUpperCase().replace(/[\u00A0]/g,' ').replace(/\s+/g,' ')}
 // Identificadores de unidad EBRO: A + 5 cifras; B/D + 6 o 7 cifras.
-function validEbroUnit(code){return /^A\d{5}$/.test(code)||/^[BD]\d{6,7}$/.test(code)}
+function validEbroUnit(code){return /^A\d{5}$/.test(code)||/^[BD]\d{5,7}$/.test(code)}
 function readUnitCandidates(text){
  const result=[];
  const fixDigits=v=>v.replace(/[OQ]/g,'0').replace(/[IL|!]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
@@ -564,6 +564,49 @@ $('ocrPreview').addEventListener('click',ev=>{
 });
 $('labelPhoto').addEventListener('change',()=>{unitCropSelection=null;unitCropFirst=null;unitSelectHelp.style.display='none';$('ocrPreview').style.outline='none'});
 $('cancelOcr').addEventListener('click',()=>{unitCropSelection=null;unitCropFirst=null;unitSelectHelp.style.display='none'});
+
+// Barcode de unidad: SOLO esquina superior derecha de la etiqueta, NUNCA Material Code ni VIN.
+async function scanUnitMiniBarcode(label,debug){
+ if(!('BarcodeDetector' in window)){debug.push('Código de barras de unidad: BarcodeDetector no disponible en este navegador.');return null}
+ let detector;
+ try{
+  const formats=await BarcodeDetector.getSupportedFormats();
+  const allowed=['code_128','code_39','code_93','ean_13'].filter(f=>formats.includes(f));
+  if(!allowed.length){debug.push('Código de barras: ningún formato compatible.');return null}
+  detector=new BarcodeDetector({formats:allowed});
+ }catch(e){debug.push('Código de barras no disponible: '+e.message);return null}
+ // La zona está ARRIBA A LA DERECHA del número grande. Evitar recortes de material y VIN.
+ const crops=[
+  [.72,.045,.27,.23],[.68,.015,.31,.31],[.74,.07,.24,.18]
+ ];
+ const hits=[];
+ for(const [x,y,w,h] of crops){
+  const crop=cropCanvas(label,label.width*x,label.height*y,label.width*w,label.height*h,4);
+  for(const angle of [0,90,270,180]){
+   let target=crop;
+   if(angle){
+    target=document.createElement('canvas');
+    target.width=angle%180?crop.height:crop.width;
+    target.height=angle%180?crop.width:crop.height;
+    const ctx=target.getContext('2d');
+    ctx.translate(target.width/2,target.height/2);
+    ctx.rotate(angle*Math.PI/180);
+    ctx.drawImage(crop,-crop.width/2,-crop.height/2);
+   }
+   try{
+    const found=await detector.detect(target);
+    for(const b of found){
+     const raw=String(b.rawValue||'').trim().toUpperCase().replace(/[\s-]/g,'');
+     if(validEbroUnit(raw))hits.push(raw);
+    }
+   }catch(e){/* Continuar con OCR si el detector falla en este recorte */}
+  }
+ }
+ const distinct=[...new Set(hits)];
+ debug.push('Código de barras pequeño (zona superior derecha): '+JSON.stringify(distinct));
+ return distinct.length===1?distinct[0]:null;
+}
+
 function strictUnitCandidates(text){return readUnitCandidates(text)}
 $('readLabel').addEventListener('click',async()=>{
  const f=$('labelPhoto').files[0];if(!f){ocrMsg('Primero haz o selecciona una fotografía.',true);return}
@@ -598,6 +641,8 @@ $('readLabel').addEventListener('click',async()=>{
   const unitFull=cropCanvas(label,0,0,label.width*.92,label.height*.34,3);
   const unitFullContrast=contrastCanvas(unitFull);
   const lecturasUnidad=[];
+  const miniBarcodeCode=await scanUnitMiniBarcode(label,debug);
+  debugEl.textContent=debug.join('\n\n');
   let selectedCode=null;
   if(unitCropSelection){
    // Coordenadas relativas a la imagen original: no dependen de la detección de la etiqueta.
@@ -625,8 +670,8 @@ $('readLabel').addEventListener('click',async()=>{
    if(c && validEbroUnit(c))lecturasUnidad.push(c);
    else if(c)debug.push('Lectura incompleta o ambigua descartada: '+c);
   }
-  // No leer códigos de barras: pertenecen a MATERIAL/VIN, no a la unidad.
-  const barcodes=[];
+  // Únicamente se ha leído el código de barras pequeño superior derecho.
+  const barcodes=miniBarcodeCode?[miniBarcodeCode]:[];
   let code=null,sugerida=null,lecturaIncierta=false;
   const colorArea=cropCanvas(label,label.width*.59,label.height*.40,label.width*.40,label.height*.22,3);
   const colorAlt=cropCanvas(label,label.width*.48,label.height*.35,label.width*.52,label.height*.30,2);
@@ -645,9 +690,15 @@ $('readLabel').addEventListener('click',async()=>{
   const corroborated=topCandidates.filter(c=>fullCandidates.includes(c));
   // Una lectura de la zona superior corroborada por otra región es más fiable.
   if(corroborated.length===1&&topCandidates.length===1)code=corroborated[0];
+  // El código de barras pequeño es prioritario; las lecturas OCR contradictorias
+  // no lo sustituyen. Se muestra siempre al usuario para confirmar antes de guardar.
+  if(miniBarcodeCode){
+   if(code && code!==miniBarcodeCode)debug.push('OCR contradictorio: '+code+' frente a código pequeño '+miniBarcodeCode);
+   code=miniBarcodeCode;sugerida=null;lecturaIncierta=false;
+  }
   // Selección manual: aceptar si las dos lecturas independientes coinciden.
   if(selectedCode){
-   if(code&&code!==selectedCode){code=null;sugerida=selectedCode;lecturaIncierta=true}
+   if(code&&code!==selectedCode){if(miniBarcodeCode){debug.push('Selección manual distinta del código pequeño; revisar: '+selectedCode)}else{code=null;sugerida=selectedCode;lecturaIncierta=true}}
    else{code=selectedCode;sugerida=null;lecturaIncierta=false}
   }
   if(!code){
@@ -656,7 +707,7 @@ $('readLabel').addEventListener('click',async()=>{
    lecturaIncierta=candidates.length>0;
    debug.push('Candidatas sin confirmar: '+JSON.stringify(candidates));
   }
-  debug.push('Reglas: A+5 cifras; B/D+6 o 7 cifras; sin códigos de barras de material.');
+  debug.push('Reglas: A+5 cifras; B/D+5 a 7 cifras (D28787 confirmado); solo código pequeño de unidad, no material/VIN.');
   debug.push('Lecturas de unidad en zona superior: '+JSON.stringify(lecturasUnidad));
   debug.push('Lecturas de unidad en etiqueta: '+JSON.stringify(fullCandidates));
   debug.push('Unidad confirmada: '+(code||'ninguna; requiere comprobación manual'));
@@ -667,7 +718,7 @@ $('readLabel').addEventListener('click',async()=>{
   if(model)$('modelo').value=model;
   if(color)$('color').value=color;
   if(trim)$('acabado').value=trim.charAt(0)+trim.slice(1).toLowerCase();
-  const report=(code?'Unidad '+code+'. ':(sugerida?'⚠ Posible unidad '+sugerida+'; compruébala e introdúcela manualmente. ':'⚠ Hay lecturas diferentes de la unidad; comprueba el número grande e introdúcelo manualmente. '))+(model?'Modelo '+model+'. ':'')+(color?'Color '+color+'. ':'Color no reconocido. ');
+  const report=(code?'Unidad '+code+(miniBarcodeCode?' (código de barras pequeño; confirma antes de guardar)':'')+'. ':(sugerida?'⚠ Posible unidad '+sugerida+'; compruébala e introdúcela manualmente. ':'⚠ Hay lecturas diferentes de la unidad; comprueba el número grande e introdúcelo manualmente. '))+(model?'Modelo '+model+'. ':'')+(color?'Color '+color+'. ':'Color no reconocido. ');
   ocrMsg(report+' Revisa los campos antes de guardar.',!code||lecturaIncierta);
   $('ocrReview').style.display='block';
   // No consultar unidad hasta terminar el OCR; una coincidencia existente carga datos guardados.
