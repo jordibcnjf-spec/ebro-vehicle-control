@@ -613,13 +613,14 @@ $('readLabel').addEventListener('click',async()=>{
  const btn=$('readLabel');btn.disabled=true;$('ocrReview').style.display='none';ocrConfirmed=false;let worker;
  const debug=[];const debugEl=$('ocrDebugText');debugEl.textContent='';
  try{
-  ocrMsg('Cargando lector gratuito...');const Tesseract=await loadOcrLibrary();worker=await Tesseract.createWorker('eng');
+  ocrMsg('Preparando fotografía...');
   const canvas=await prepareOcrImage(f),box=locateLabel(canvas);
   // Si la detección automática es muy pequeña o extraña, preferir imagen completa.
   const usable=box.found&&box.w>canvas.width*.45&&box.h>canvas.height*.35;
   const label=usable?cropCanvas(canvas,box.x,box.y,box.w,box.h,1.5):cropCanvas(canvas,0,0,canvas.width,canvas.height,1.5);
   debug.push('Diana localizada: '+(box.found?'sí':'no, imagen completa')+'; tamaño '+box.w+'×'+box.h);
   const read=async(name,region,psm,whitelist)=>{
+   if(!worker){ocrMsg('Iniciando reconocimiento de texto...');const Tesseract=await loadOcrLibrary();worker=await Tesseract.createWorker('eng')}
    const opts={tessedit_pageseg_mode:String(psm),tessedit_char_whitelist:whitelist||''};await worker.setParameters(opts);
    ocrMsg('Leyendo '+name+'...');const r=await worker.recognize(region),t=r?.data?.text||'';
    debug.push(name+': '+JSON.stringify(t.slice(0,500)));debugEl.textContent=debug.join('\n\n');return t;
@@ -641,6 +642,7 @@ $('readLabel').addEventListener('click',async()=>{
   const unitFull=cropCanvas(label,0,0,label.width*.92,label.height*.34,3);
   const unitFullContrast=contrastCanvas(unitFull);
   const lecturasUnidad=[];
+  ocrMsg('Buscando código de barras de unidad...');
   const miniBarcodeCode=await scanUnitMiniBarcode(label,debug);
   debugEl.textContent=debug.join('\n\n');
   let selectedCode=null;
@@ -655,12 +657,8 @@ $('readLabel').addEventListener('click',async()=>{
    debug.push('Número seleccionado: '+JSON.stringify({normal:c1,contraste:c2,coincidencia:selectedCode}));
   }
 
-  for(const [nombre,region,psm,whitelist] of [
+  if(!miniBarcodeCode&&!selectedCode)for(const [nombre,region,psm,whitelist] of [
    ['unidad superior aislada',unitTight,7,'ABD0123456789OQISZIL|!'],
-   ['unidad superior por línea',unitTop,7,'ABD0123456789OQISZIL|!'],
-   ['unidad superior caracteres',unitTight,13,'ABD0123456789OQISZIL|!'],
-   ['unidad con contraste',contrastCanvas(unitTop),7,'ABD0123456789OQISZIL|!'],
-   ['unidad franja alternativa',unitWide,6,'ABD0123456789OQISZIL|!'],
    ['unidad superior completa',unitFull,7,'ABD0123456789OQISZIL|!'],
    ['unidad superior completa contraste',unitFullContrast,7,'ABD0123456789OQISZIL|!']
   ]){
@@ -676,14 +674,16 @@ $('readLabel').addEventListener('click',async()=>{
   const colorArea=cropCanvas(label,label.width*.59,label.height*.40,label.width*.40,label.height*.22,3);
   const colorAlt=cropCanvas(label,label.width*.48,label.height*.35,label.width*.52,label.height*.30,2);
   let color=readColor(await read('color ampliado',colorArea,6));
-  if(!color)color=readColor(await read('color por línea',colorArea,7));
   if(!color)color=readColor(await read('color zona ampliada',colorAlt,6));
-  const text=await read('modelo y acabado',label,3);
+  const modelArea=cropCanvas(label,label.width*.07,label.height*.33,label.width*.76,label.height*.35,2);
+  let text=await read('modelo y acabado',modelArea,6);
   let model=readModel(text),trim=readTrim(text);color=color||readColor(text);
-  if(!model||!color||!trim){const all=await read('etiqueta completa',canvas,3);model=model||readModel(all);trim=trim||readTrim(all);color=color||readColor(all)}
+  if(!model||!trim){const extra=await read('modelo y acabado ampliados',label,3);text+='\n'+extra;model=model||readModel(extra);trim=trim||readTrim(extra);color=color||readColor(extra)}
+  if(!model||!color||!trim){const all=await read('etiqueta completa',canvas,3);text+='\n'+all;model=model||readModel(all);trim=trim||readTrim(all);color=color||readColor(all)}
+  // Si el código pequeño es válido, se evitan las múltiples pasadas OCR del número grande.
   // Comparar lecturas OCR del número grande. No usar código de material ni VIN.
   const otherCandidates=readUnitCandidates(text);
-  const fullCandidates=otherCandidates.length?otherCandidates:readUnitCandidates(await read('verificación unidad etiqueta',label,3));
+  const fullCandidates=miniBarcodeCode?[miniBarcodeCode]:(otherCandidates.length?otherCandidates:readUnitCandidates(await read('verificación unidad etiqueta',label,3)));
   const scores=new Map();
   for(const c of lecturasUnidad)if(validEbroUnit(c))scores.set(c,(scores.get(c)||0)+1);
   const topCandidates=[...scores.keys()];
