@@ -180,7 +180,7 @@ main{max-width:none;padding:0 18px 22px;margin:0 auto}
 
 /* 6.1 · Unidades terminadas en producción */
 .prod-finished-panel{background:#303439;border:1px solid #555b61;border-radius:12px;padding:17px;margin:18px 0;color:#f5f5f5}
-.prod-finished-panel h3{margin:0 0 7px}.prod-finished-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}.prod-finished-controls input{flex:1;min-width:190px;background:#fff;color:#222}.prod-finished-controls select{width:auto;min-width:165px;background:#fff;color:#222}.prod-finished-list{max-height:420px;overflow:auto}.prod-finished-row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(110px,1fr) minmax(100px,1fr);gap:12px;padding:11px;border-bottom:1px solid #50555a;align-items:center;font-size:14px}.prod-finished-row strong{color:#ff9b18;font-size:17px}.prod-finished-row.head{background:#22262a;color:#ddd;font-weight:700;position:sticky;top:0}.prod-finished-row.head span{color:#ddd}@media(max-width:550px){.prod-finished-row{grid-template-columns:1fr 1fr;gap:5px}.prod-finished-row>*:last-child{grid-column:1/-1}.prod-finished-row.head{display:none}}
+.prod-finished-panel h3{margin:0 0 7px}.prod-finished-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}.prod-finished-controls input{flex:1;min-width:190px;background:#fff;color:#222}.prod-finished-controls select{width:auto;min-width:165px;background:#fff;color:#222}.prod-finished-list{max-height:420px;overflow:auto}.prod-finished-row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(110px,1fr) minmax(100px,1fr) minmax(150px,1.2fr);gap:12px;padding:11px;border-bottom:1px solid #50555a;align-items:center;font-size:14px}.prod-finished-row strong{color:#ff9b18;font-size:17px}.prod-finished-row.head{background:#22262a;color:#ddd;font-weight:700;position:sticky;top:0}.prod-finished-row.head span{color:#ddd}@media(max-width:550px){.prod-finished-row{grid-template-columns:1fr 1fr;gap:5px}.prod-finished-row>*:last-child{grid-column:1/-1}.prod-finished-row.head{display:none}}
 
 /* EBRO 6.5 · Paneles y vista dual */
 .ebro-switch{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.ebro-switch button{background:#3b3e43;color:#f5f5f5;border:1px solid #60656a}.ebro-switch button.active{background:#ff9300;color:#17191b;border-color:#ff9300}
@@ -960,16 +960,16 @@ async function loadProduction(){
   // Se consulta el historial para identificar la última reparación de cada unidad.
   const [goalsResult,repResult]=await Promise.all([
    supabase.from('ebro_previsiones_diarias').select('fecha,objetivo').gte('fecha',addDay(date,-35)).lte('fecha',addDay(date,35)).limit(100),
-   supabase.from('reparaciones').select('defecto_id,fecha').order('fecha',{ascending:false}).limit(10000)
+   supabase.from('reparaciones').select('defecto_id,fecha,realizado_por').order('fecha',{ascending:false}).limit(10000)
   ]);
   if(goalsResult.error)throw new Error('Falta configurar la tabla de previsiones en Supabase: '+goalsResult.error.message);
   if(repResult.error)throw new Error('No se pudo consultar el historial de reparaciones: '+repResult.error.message);
   prodState.goals=goalsResult.data||[];
   const defectById=new Map();for(const [vid,ds] of Object.entries(defectosPorVehiculo))for(const d of ds)defectById.set(String(d.id),vid);
-  const lastDate=new Map();for(const r of repResult.data||[]){const vid=defectById.get(String(r.defecto_id));if(!vid)continue;const day=prodDateOf(r.fecha);if(!day)continue;const previous=lastDate.get(vid);if(!previous||day>previous)lastDate.set(vid,day)}
+  const lastDate=new Map(),lastRepairAuthors=new Map(),lastRepairTimestamp=new Map();for(const r of repResult.data||[]){const vid=defectById.get(String(r.defecto_id));if(!vid)continue;const day=prodDateOf(r.fecha);if(!day)continue;const previous=lastDate.get(vid);if(!previous||day>previous)lastDate.set(vid,day);if(!lastRepairTimestamp.has(vid)||String(r.fecha)>lastRepairTimestamp.get(vid)){lastRepairTimestamp.set(vid,String(r.fecha));lastRepairAuthors.set(vid,r.realizado_por||null)}}
   const count=new Map(),modelsByDate=new Map();
   for(const v of records){const ds=defectosPorVehiculo[v.id]||[];if(!ds.length||!ds.every(d=>d.estado==='Terminado'||d.estado==='Reparado'))continue;const day=lastDate.get(String(v.id));if(!day)continue;count.set(day,(count.get(day)||0)+1);const modelMap=modelsByDate.get(day)||new Map();modelMap.set(v.modelo||'Sin modelo',(modelMap.get(v.modelo||'Sin modelo')||0)+1);modelsByDate.set(day,modelMap)}
-  prodState.daily=count;prodState.models=modelsByDate;prodState.lastFinishedDates=lastDate;prodState.loaded=true;
+  prodState.daily=count;prodState.models=modelsByDate;prodState.lastFinishedDates=lastDate;prodState.lastRepairAuthors=lastRepairAuthors;prodState.loaded=true;
   renderProduction();msg('prodMessage','Datos actualizados. Las reparaciones se cuentan por vehículo, no por número de defectos.');
  }catch(err){prodState.loaded=false;msg('prodMessage',err.message,true);for(const id of ['prodBars','prodLine','prodModels','prodMonth','movementDaily','movementWeekly'])prodEmpty(id,'No hay datos disponibles.');}
 }
@@ -999,8 +999,8 @@ function renderFinishedUnits(){
  }).sort((a,b)=>String(a.bastidor||a.unidad||'').localeCompare(String(b.bastidor||b.unidad||''),'es',{numeric:true}));
  $('finishedCount').textContent=finished.length+' vehículo(s) terminado(s)'+(onlyDay?' en la fecha seleccionada':'');
  if(!finished.length){root.append(el('p','No hay unidades terminadas que coincidan con el filtro.','prod-no-data'));return}
- const head=el('div',undefined,'prod-finished-row head');for(const label of ['Número de unidad','Modelo','Última reparación'])head.append(el('span',label));root.append(head);
- for(const v of finished){const row=el('div',undefined,'prod-finished-row');const unit=el('strong',v.bastidor||v.unidad||'Sin unidad');row.append(unit,el('span',v.modelo||'—'),el('span',prodState.lastFinishedDates?.get(String(v.id))||'Sin fecha registrada'));root.append(row)}
+ const head=el('div',undefined,'prod-finished-row head');for(const label of ['Número de unidad','Modelo','Última reparación','Reparado por'])head.append(el('span',label));root.append(head);
+ for(const v of finished){const row=el('div',undefined,'prod-finished-row');const unit=el('strong',v.bastidor||v.unidad||'Sin unidad');const authorId=prodState.lastRepairAuthors?.get(String(v.id));const author=authorId?(repairNames[String(authorId)]||'Usuario sin nombre visible · ID '+String(authorId).slice(0,8)):'Sin autor registrado';row.append(unit,el('span',v.modelo||'—'),el('span',prodState.lastFinishedDates?.get(String(v.id))||'Sin fecha registrada'),el('span',author));root.append(row)}
 }
 $('finishedSearch').addEventListener('input',()=>{if(prodState.loaded)renderFinishedUnits()});
 $('finishedPeriod').addEventListener('change',()=>{if(prodState.loaded)renderFinishedUnits()});
