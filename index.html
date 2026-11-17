@@ -638,7 +638,7 @@ function makeRepairHistory(v){
 }
 function render(){
  const defectQuery=$('defectFilter').value.trim().toLocaleLowerCase();const q=$('search').value.trim().toLocaleLowerCase(), mf=$('modelFilter').value,sf=$('statusFilter').value,tf=$('trimFilter').value,cf=$('colorFilter').value,lf=$('locationFilter').value;
- const filtered=records.filter(v=>(!mf||v.modelo===mf)&&(!sf||estadoVisual(v)===sf)&&(!tf||v.acabado===tf)&&(!cf||v.color===cf)&&(!lf||v.zona===lf)&&(!defectQuery||[v.defecto,...(defectosPorVehiculo[v.id]||[]).map(d=>d.descripcion)].some(x=>String(x??'').toLocaleLowerCase().includes(defectQuery)))&&[v.bastidor,v.vin,v.acabado,v.modelo,v.color,v.zona,v.fila,v.plaza,v.defecto,v.estado,...(defectosPorVehiculo[v.id]||[]).map(d=>d.descripcion)].some(x=>String(x??'').toLocaleLowerCase().includes(q)));
+ const filtered=records.filter(v=>(!mf||v.modelo===mf)&&(!sf||estadoVisual(v)===sf)&&(!tf||v.acabado===tf)&&(!cf||v.color===cf)&&(!lf||v.zona===lf)&&(!defectQuery||[v.defecto,...(defectosPorVehiculo[v.id]||[]).map(d=>d.descripcion)].some(x=>String(x??'').toLocaleLowerCase().includes(defectQuery)))&&[v.bastidor,v.vin,v.acabado,v.modelo,v.color,v.zona,v.fila,v.plaza,v.defecto,v.estado,...(defectosPorVehiculo[v.id]||[]).map(d=>d.descripcion)].some(x=>String(x??'').toLocaleLowerCase().includes(q))).sort((a,b)=>Number(estadoVisual(a)==='Terminado')-Number(estadoVisual(b)==='Terminado'));
  $('totalCount').textContent=records.length;
  $('progressCount').textContent=records.filter(v=>estadoVisual(v)==='Pendiente').length;
  $('doneCount').textContent=records.filter(v=>estadoVisual(v)==='Terminado').length;
