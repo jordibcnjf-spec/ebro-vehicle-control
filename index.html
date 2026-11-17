@@ -413,52 +413,29 @@ $('labelPhoto').addEventListener('change',()=>{if(photoUrl)window.URL.revokeObje
 $('cancelOcr').addEventListener('click',()=>{if(photoUrl)window.URL.revokeObjectURL(photoUrl);photoUrl=null;$('labelPhoto').value='';$('ocrPreview').removeAttribute('src');$('ocrPreview').style.display='none';$('ocrReview').style.display='none';ocrConfirmed=false;ocrMsg('Fotografía descartada.')});
 $('confirmOcr').addEventListener('click',()=>{ocrConfirmed=true;$('ocrReview').style.display='none';ocrMsg('Datos confirmados. Revisa los datos y pulsa «Guardar vehículo».')});
 function normalizeOcr(text){return text.toUpperCase().replace(/[\u00A0]/g,' ').replace(/\s+/g,' ')}
-function readCode(text){
- // Prefijos A, B o D, seguidos de 5 a 8 cifras. Nunca deducir cifras ausentes.
- // Las sustituciones OCR se aplican SOLO a las cifras, no a la letra inicial.
- const lines=String(text||'').toUpperCase().split(/\r?\n/);
- for(const line of lines){
-  const fragments=line.match(/[A-Z0-9|!\s-]+/g)||[];
-  for(const fragment of fragments){
-   const compact=fragment.replace(/[\s-]/g,'');
-   // Solo coincidencias aisladas: evita tomar el VIN o códigos largos.
-   const match=compact.match(/^([ABD])([0-9OQIL|!SZ]{5,8})$/);
-   if(!match)continue;
-   const digits=match[2].replace(/[OQ]/g,'0').replace(/[IL|!]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
-   if(/^\d{5,8}$/.test(digits))return match[1]+digits;
-  }
-  // OCR puede separar letra y cifras, con ruido de puntuación.
-  const isolated=line.match(/(?:^|[^A-Z0-9])([ABD])\s*[-:]?\s*([0-9OQIL|!SZ](?:[\s-]*[0-9OQIL|!SZ]){4,7})(?![A-Z0-9])/);
-  if(isolated){
-   const digits=isolated[2].replace(/[\s-]/g,'').replace(/[OQ]/g,'0').replace(/[IL|!]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
-   if(/^\d{5,8}$/.test(digits))return isolated[1]+digits;
-  }
- }
- return null;
-}
-function readCodeTop(text){return readCode(text)}
-// Solo códigos completos: A, B o D + seis dígitos. No inventar caracteres.
+// Identificadores de unidad EBRO: A + 5 cifras; B/D + 6 o 7 cifras.
+function validEbroUnit(code){return /^A\d{5}$/.test(code)||/^[BD]\d{6,7}$/.test(code)}
 function readUnitCandidates(text){
- const results=[];
+ const result=[];
+ const fixDigits=v=>v.replace(/[OQ]/g,'0').replace(/[IL|!]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
  for(const line of String(text||'').toUpperCase().split(/\r?\n/)){
-  const normalized=line.replace(/[OQ]/g,'0').replace(/[IL|!]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
-  const re=/(^|[^A-Z0-9])([ABD])\s*[-:]?\s*((?:[0-9]\s*){6})(?![A-Z0-9])/g;
-  let match;
-  while((match=re.exec(normalized))!==null){const unit=match[2]+match[3].replace(/\s/g,'');if(/^[ABD]\d{6}$/.test(unit))results.push(unit)}
+  // Aceptar espacios dentro del número, pero nunca construir dígitos inexistentes.
+  const cleaned=line.replace(/[^A-Z0-9|! ]/g,' ');
+  const chunks=cleaned.match(/[ABD][0-9OQIL|!SZ ]{5,18}/g)||[];
+  for(const chunk of chunks){
+   const compact=chunk.replace(/\s/g,'');const code=compact[0]+fixDigits(compact.slice(1));
+   if(validEbroUnit(code))result.push(code);
+  }
+  const compact=cleaned.replace(/\s/g,'');
+  if(/^[ABD][0-9OQIL|!SZ]{5,7}$/.test(compact)){
+   const code=compact[0]+fixDigits(compact.slice(1));
+   if(validEbroUnit(code))result.push(code);
+  }
  }
- return [...new Set(results)];
+ return [...new Set(result)];
 }
-async function readUnitBarcode(canvas){
- if(!('BarcodeDetector' in window))return [];
- try{
-  const formats=await BarcodeDetector.getSupportedFormats();
-  const allowed=['code_128','code_39','code_93','ean_13'].filter(f=>formats.includes(f));
-  if(!allowed.length)return [];
-  const detector=new BarcodeDetector({formats:allowed});
-  const found=await detector.detect(canvas);
-  return [...new Set(found.flatMap(b=>readUnitCandidates(String(b.rawValue||''))))];
- }catch{return []}
-}
+function readCode(text){return readUnitCandidates(text)[0]||null}
+function readCodeTop(text){return readCode(text)}
 // Encontrar la diana por sus píxeles claros, en dos dimensiones (no solo por filas).
 function locateLabel(canvas){
  const w=canvas.width,h=canvas.height,step=Math.max(3,Math.ceil(Math.max(w,h)/350));
@@ -559,6 +536,35 @@ async function prepareOcrImage(file){
 function updateVinSuffix(){const vin=$('vin').value.trim().toUpperCase();$('vin').value=vin;$('vinUltimos').value=/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)?vin.slice(-6):''}
 $('vin').addEventListener('input',updateVinSuffix);
 async function loadOcrLibrary(){if(window.Tesseract)return window.Tesseract;await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('No se pudo cargar el lector OCR. Comprueba la conexión.'));document.head.append(script)});if(!window.Tesseract)throw new Error('El lector OCR no está disponible');return window.Tesseract}
+// OCR 6.5.1: selección visual opcional del número grande (dos pulsaciones).
+let unitCropSelection=null, unitCropFirst=null;
+const unitSelectButton=document.createElement('button');
+unitSelectButton.type='button';unitSelectButton.className='secondary';unitSelectButton.textContent='🎯 Seleccionar número en la foto';
+$('readLabel').parentElement.append(unitSelectButton);
+const unitSelectHelp=document.createElement('p');unitSelectHelp.className='muted';unitSelectHelp.style.display='none';
+unitSelectButton.after(unitSelectHelp);
+unitSelectButton.addEventListener('click',()=>{
+ if(!$('labelPhoto').files[0]){ocrMsg('Primero selecciona una fotografía.',true);return}
+ unitCropSelection=null;unitCropFirst=null;unitSelectHelp.style.display='block';
+ unitSelectHelp.textContent='Pulsa la esquina superior izquierda del número grande y después su esquina inferior derecha. Luego pulsa «Leer etiqueta».';
+ $('ocrPreview').style.outline='3px solid #ff9300';$('ocrPreview').style.cursor='crosshair';
+});
+$('ocrPreview').addEventListener('click',ev=>{
+ if(unitSelectHelp.style.display==='none')return;
+ const img=$('ocrPreview'),r=img.getBoundingClientRect();
+ const scale=Math.min(r.width/img.naturalWidth,r.height/img.naturalHeight);
+ const dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;
+ const ox=(r.width-dw)/2,oy=(r.height-dh)/2;
+ const x=Math.max(0,Math.min(1,(ev.clientX-r.left-ox)/dw)),y=Math.max(0,Math.min(1,(ev.clientY-r.top-oy)/dh));
+ if(!unitCropFirst){unitCropFirst={x,y};unitSelectHelp.textContent='Ahora pulsa la esquina inferior derecha del número grande.';return}
+ const a=unitCropFirst;unitCropSelection={x:Math.min(a.x,x),y:Math.min(a.y,y),w:Math.abs(x-a.x),h:Math.abs(y-a.y)};
+ if(unitCropSelection.w<.06||unitCropSelection.h<.02){unitCropSelection=null;unitCropFirst=null;unitSelectHelp.textContent='Selección demasiado pequeña. Vuelve a marcar las dos esquinas.';return}
+ unitCropFirst=null;unitSelectHelp.textContent='Zona seleccionada. Pulsa «Leer etiqueta». Si la lectura no es segura, revisa el número manualmente.';
+ img.style.outline='3px solid #28b463';img.style.cursor='default';unitSelectHelp.style.display='none';
+});
+$('labelPhoto').addEventListener('change',()=>{unitCropSelection=null;unitCropFirst=null;unitSelectHelp.style.display='none';$('ocrPreview').style.outline='none'});
+$('cancelOcr').addEventListener('click',()=>{unitCropSelection=null;unitCropFirst=null;unitSelectHelp.style.display='none'});
+function strictUnitCandidates(text){return readUnitCandidates(text)}
 $('readLabel').addEventListener('click',async()=>{
  const f=$('labelPhoto').files[0];if(!f){ocrMsg('Primero haz o selecciona una fotografía.',true);return}
  const btn=$('readLabel');btn.disabled=true;$('ocrReview').style.display='none';ocrConfirmed=false;let worker;
@@ -592,6 +598,18 @@ $('readLabel').addEventListener('click',async()=>{
   const unitFull=cropCanvas(label,0,0,label.width*.92,label.height*.34,3);
   const unitFullContrast=contrastCanvas(unitFull);
   const lecturasUnidad=[];
+  let selectedCode=null;
+  if(unitCropSelection){
+   // Coordenadas relativas a la imagen original: no dependen de la detección de la etiqueta.
+   const a=unitCropSelection;
+   const selected=cropCanvas(canvas,canvas.width*a.x,canvas.height*a.y,canvas.width*a.w,canvas.height*a.h,3);
+   const t1=await read('número seleccionado por usuario',selected,7,'ABD0123456789OQISZIL|!');
+   const t2=await read('número seleccionado contraste',contrastCanvas(selected),7,'ABD0123456789OQISZIL|!');
+   const c1=strictUnitCandidates(t1),c2=strictUnitCandidates(t2);
+   if(c1.length===1&&c2.length===1&&c1[0]===c2[0])selectedCode=c1[0];
+   debug.push('Número seleccionado: '+JSON.stringify({normal:c1,contraste:c2,coincidencia:selectedCode}));
+  }
+
   for(const [nombre,region,psm,whitelist] of [
    ['unidad superior aislada',unitTight,7,'ABD0123456789OQISZIL|!'],
    ['unidad superior por línea',unitTop,7,'ABD0123456789OQISZIL|!'],
@@ -604,12 +622,11 @@ $('readLabel').addEventListener('click',async()=>{
    const raw=await read(nombre,region,psm,whitelist);
    const c=readCodeTop(raw);
    // Una B truncada a cinco cifras no se debe dar por válida automáticamente.
-   if(c && /^[ABD]\d{6}$/.test(c))lecturasUnidad.push(c);
+   if(c && validEbroUnit(c))lecturasUnidad.push(c);
    else if(c)debug.push('Lectura incompleta o ambigua descartada: '+c);
   }
-  // El código de barras superior es una fuente independiente cuando el navegador lo admite.
-  const barcodes=await readUnitBarcode(label);
-  debug.push('Códigos de barras detectados: '+JSON.stringify(barcodes));
+  // No leer códigos de barras: pertenecen a MATERIAL/VIN, no a la unidad.
+  const barcodes=[];
   let code=null,sugerida=null,lecturaIncierta=false;
   const colorArea=cropCanvas(label,label.width*.59,label.height*.40,label.width*.40,label.height*.22,3);
   const colorAlt=cropCanvas(label,label.width*.48,label.height*.35,label.width*.52,label.height*.30,2);
@@ -619,27 +636,27 @@ $('readLabel').addEventListener('click',async()=>{
   const text=await read('modelo y acabado',label,3);
   let model=readModel(text),trim=readTrim(text);color=color||readColor(text);
   if(!model||!color||!trim){const all=await read('etiqueta completa',canvas,3);model=model||readModel(all);trim=trim||readTrim(all);color=color||readColor(all)}
-  // Comparar OCR de la franja superior, OCR de la etiqueta completa y código de barras.
-  // Una lectura OCR equivocada nunca gana por repetirse en recortes casi idénticos.
+  // Comparar lecturas OCR del número grande. No usar código de material ni VIN.
   const otherCandidates=readUnitCandidates(text);
   const fullCandidates=otherCandidates.length?otherCandidates:readUnitCandidates(await read('verificación unidad etiqueta',label,3));
   const scores=new Map();
-  for(const c of lecturasUnidad)if(/^[ABD]\d{6}$/.test(c))scores.set(c,(scores.get(c)||0)+1);
+  for(const c of lecturasUnidad)if(validEbroUnit(c))scores.set(c,(scores.get(c)||0)+1);
   const topCandidates=[...scores.keys()];
   const corroborated=topCandidates.filter(c=>fullCandidates.includes(c));
-  if(barcodes.length===1){
-   // Si el código de barras coincide con el OCR, confirmarlo. En caso contrario pedir revisión.
-   if(topCandidates.includes(barcodes[0])||fullCandidates.includes(barcodes[0]))code=barcodes[0];
-   else sugerida=barcodes[0];
-  }else if(barcodes.length===0&&corroborated.length===1){
-   code=corroborated[0];
+  // Una lectura de la zona superior corroborada por otra región es más fiable.
+  if(corroborated.length===1&&topCandidates.length===1)code=corroborated[0];
+  // Selección manual: aceptar si las dos lecturas independientes coinciden.
+  if(selectedCode){
+   if(code&&code!==selectedCode){code=null;sugerida=selectedCode;lecturaIncierta=true}
+   else{code=selectedCode;sugerida=null;lecturaIncierta=false}
   }
   if(!code){
-   const candidates=[...new Set([...barcodes,...fullCandidates,...topCandidates])];
+   const candidates=[...new Set([...fullCandidates,...topCandidates,...(selectedCode?[selectedCode]:[])])];
    sugerida=sugerida||((candidates.length===1)?candidates[0]:null);
    lecturaIncierta=candidates.length>0;
    debug.push('Candidatas sin confirmar: '+JSON.stringify(candidates));
   }
+  debug.push('Reglas: A+5 cifras; B/D+6 o 7 cifras; sin códigos de barras de material.');
   debug.push('Lecturas de unidad en zona superior: '+JSON.stringify(lecturasUnidad));
   debug.push('Lecturas de unidad en etiqueta: '+JSON.stringify(fullCandidates));
   debug.push('Unidad confirmada: '+(code||'ninguna; requiere comprobación manual'));
