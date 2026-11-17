@@ -565,18 +565,25 @@ $('readLabel').addEventListener('click',async()=>{
   // y el 30% superior de la diana. Mantener margen porque hay perspectiva.
   const unitTop=cropCanvas(label,label.width*.01,label.height*.015,label.width*.68,label.height*.35,3);
   const unitTight=cropCanvas(label,label.width*.02,label.height*.025,label.width*.64,label.height*.29,3);
-  const unitWide=cropCanvas(label,0,0,label.width*.73,label.height*.39,2.5);
+  const unitWide=cropCanvas(label,0,0,label.width*.85,label.height*.39,2.5);
+  // Recorte adicional con margen derecho: el OCR anterior perdía el último dígito.
+  const unitFull=cropCanvas(label,0,0,label.width*.92,label.height*.34,3);
+  const unitFullContrast=contrastCanvas(unitFull);
   const lecturasUnidad=[];
   for(const [nombre,region,psm,whitelist] of [
    ['unidad superior aislada',unitTight,7,'ABD0123456789OQISZIL|!'],
    ['unidad superior por línea',unitTop,7,'ABD0123456789OQISZIL|!'],
    ['unidad superior caracteres',unitTight,13,'ABD0123456789OQISZIL|!'],
    ['unidad con contraste',contrastCanvas(unitTop),7,'ABD0123456789OQISZIL|!'],
-   ['unidad franja alternativa',unitWide,6,'ABD0123456789OQISZIL|!']
+   ['unidad franja alternativa',unitWide,6,'ABD0123456789OQISZIL|!'],
+   ['unidad superior completa',unitFull,7,'ABD0123456789OQISZIL|!'],
+   ['unidad superior completa contraste',unitFullContrast,7,'ABD0123456789OQISZIL|!']
   ]){
    const raw=await read(nombre,region,psm,whitelist);
    const c=readCodeTop(raw);
-   if(c)lecturasUnidad.push(c);
+   // Una B truncada a cinco cifras no se debe dar por válida automáticamente.
+   if(c && !(c.startsWith('B') && /^B\d{5}$/.test(c)))lecturasUnidad.push(c);
+   else if(c && c.startsWith('B'))debug.push('Lectura B incompleta descartada: '+c);
   }
   const frecuencia=new Map();for(const c of lecturasUnidad)frecuencia.set(c,(frecuencia.get(c)||0)+1);
   const ordenadas=[...frecuencia].sort((a,b)=>b[1]-a[1]);
