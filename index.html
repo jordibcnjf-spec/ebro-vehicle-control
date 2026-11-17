@@ -437,6 +437,28 @@ function readCode(text){
  return null;
 }
 function readCodeTop(text){return readCode(text)}
+// Solo códigos completos: A, B o D + seis dígitos. No inventar caracteres.
+function readUnitCandidates(text){
+ const results=[];
+ for(const line of String(text||'').toUpperCase().split(/\r?\n/)){
+  const normalized=line.replace(/[OQ]/g,'0').replace(/[IL|!]/g,'1').replace(/S/g,'5').replace(/Z/g,'2');
+  const re=/(^|[^A-Z0-9])([ABD])\s*[-:]?\s*((?:[0-9]\s*){6})(?![A-Z0-9])/g;
+  let match;
+  while((match=re.exec(normalized))!==null){const unit=match[2]+match[3].replace(/\s/g,'');if(/^[ABD]\d{6}$/.test(unit))results.push(unit)}
+ }
+ return [...new Set(results)];
+}
+async function readUnitBarcode(canvas){
+ if(!('BarcodeDetector' in window))return [];
+ try{
+  const formats=await BarcodeDetector.getSupportedFormats();
+  const allowed=['code_128','code_39','code_93','ean_13'].filter(f=>formats.includes(f));
+  if(!allowed.length)return [];
+  const detector=new BarcodeDetector({formats:allowed});
+  const found=await detector.detect(canvas);
+  return [...new Set(found.flatMap(b=>readUnitCandidates(String(b.rawValue||''))))];
+ }catch{return []}
+}
 // Encontrar la diana por sus píxeles claros, en dos dimensiones (no solo por filas).
 function locateLabel(canvas){
  const w=canvas.width,h=canvas.height,step=Math.max(3,Math.ceil(Math.max(w,h)/350));
@@ -582,16 +604,13 @@ $('readLabel').addEventListener('click',async()=>{
    const raw=await read(nombre,region,psm,whitelist);
    const c=readCodeTop(raw);
    // Una B truncada a cinco cifras no se debe dar por válida automáticamente.
-   if(c && !(c.startsWith('B') && /^B\d{5}$/.test(c)))lecturasUnidad.push(c);
-   else if(c && c.startsWith('B'))debug.push('Lectura B incompleta descartada: '+c);
+   if(c && /^[ABD]\d{6}$/.test(c))lecturasUnidad.push(c);
+   else if(c)debug.push('Lectura incompleta o ambigua descartada: '+c);
   }
-  const frecuencia=new Map();for(const c of lecturasUnidad)frecuencia.set(c,(frecuencia.get(c)||0)+1);
-  const ordenadas=[...frecuencia].sort((a,b)=>b[1]-a[1]);
-  // No escribir automáticamente un número inferido de una única lectura.
-  const code=ordenadas.length&&ordenadas[0][1]>=2&&(!ordenadas[1]||ordenadas[0][1]>ordenadas[1][1])?ordenadas[0][0]:null;
-  const sugerida=ordenadas.length?ordenadas[0][0]:null;
-  const lecturaIncierta=!code&&!!sugerida;
-  debug.push('Candidatas de unidad: '+JSON.stringify(lecturasUnidad)+'; aceptada: '+(code||'ninguna (revisar manualmente)')+(sugerida&&!code?'; sugerida: '+sugerida:''));
+  // El código de barras superior es una fuente independiente cuando el navegador lo admite.
+  const barcodes=await readUnitBarcode(label);
+  debug.push('Códigos de barras detectados: '+JSON.stringify(barcodes));
+  let code=null,sugerida=null,lecturaIncierta=false;
   const colorArea=cropCanvas(label,label.width*.59,label.height*.40,label.width*.40,label.height*.22,3);
   const colorAlt=cropCanvas(label,label.width*.48,label.height*.35,label.width*.52,label.height*.30,2);
   let color=readColor(await read('color ampliado',colorArea,6));
@@ -600,12 +619,38 @@ $('readLabel').addEventListener('click',async()=>{
   const text=await read('modelo y acabado',label,3);
   let model=readModel(text),trim=readTrim(text);color=color||readColor(text);
   if(!model||!color||!trim){const all=await read('etiqueta completa',canvas,3);model=model||readModel(all);trim=trim||readTrim(all);color=color||readColor(all)}
-  if(code)$('unidad').value=code;else $('unidad').value='';
-  if(lecturaIncierta){debug.push('AVISO: posible unidad '+sugerida+'; no se rellena automáticamente por falta de coincidencias.');debugEl.textContent=debug.join('\n\n');}
+  // Comparar OCR de la franja superior, OCR de la etiqueta completa y código de barras.
+  // Una lectura OCR equivocada nunca gana por repetirse en recortes casi idénticos.
+  const otherCandidates=readUnitCandidates(text);
+  const fullCandidates=otherCandidates.length?otherCandidates:readUnitCandidates(await read('verificación unidad etiqueta',label,3));
+  const scores=new Map();
+  for(const c of lecturasUnidad)if(/^[ABD]\d{6}$/.test(c))scores.set(c,(scores.get(c)||0)+1);
+  const topCandidates=[...scores.keys()];
+  const corroborated=topCandidates.filter(c=>fullCandidates.includes(c));
+  if(barcodes.length===1){
+   // Si el código de barras coincide con el OCR, confirmarlo. En caso contrario pedir revisión.
+   if(topCandidates.includes(barcodes[0])||fullCandidates.includes(barcodes[0]))code=barcodes[0];
+   else sugerida=barcodes[0];
+  }else if(barcodes.length===0&&corroborated.length===1){
+   code=corroborated[0];
+  }
+  if(!code){
+   const candidates=[...new Set([...barcodes,...fullCandidates,...topCandidates])];
+   sugerida=sugerida||((candidates.length===1)?candidates[0]:null);
+   lecturaIncierta=candidates.length>0;
+   debug.push('Candidatas sin confirmar: '+JSON.stringify(candidates));
+  }
+  debug.push('Lecturas de unidad en zona superior: '+JSON.stringify(lecturasUnidad));
+  debug.push('Lecturas de unidad en etiqueta: '+JSON.stringify(fullCandidates));
+  debug.push('Unidad confirmada: '+(code||'ninguna; requiere comprobación manual'));
+  debugEl.textContent=debug.join('\n\n');
+  $('unidad').value=code||'';
+  if(lecturaIncierta)debug.push('AVISO: lecturas no coincidentes o insuficientes; revisar el número grande de la etiqueta.');
+  debugEl.textContent=debug.join('\n\n');
   if(model)$('modelo').value=model;
   if(color)$('color').value=color;
   if(trim)$('acabado').value=trim.charAt(0)+trim.slice(1).toLowerCase();
-  const report=(code?'Unidad '+code+'. ':(sugerida?'⚠ Posible unidad '+sugerida+'; compruébala e introdúcela manualmente. ':'⚠ Unidad no reconocida con seguridad; introdúcela manualmente. '))+(model?'Modelo '+model+'. ':'')+(color?'Color '+color+'. ':'Color no reconocido. ');
+  const report=(code?'Unidad '+code+'. ':(sugerida?'⚠ Posible unidad '+sugerida+'; compruébala e introdúcela manualmente. ':'⚠ Hay lecturas diferentes de la unidad; comprueba el número grande e introdúcelo manualmente. '))+(model?'Modelo '+model+'. ':'')+(color?'Color '+color+'. ':'Color no reconocido. ');
   ocrMsg(report+' Revisa los campos antes de guardar.',!code||lecturaIncierta);
   $('ocrReview').style.display='block';
   // No consultar unidad hasta terminar el OCR; una coincidencia existente carga datos guardados.
