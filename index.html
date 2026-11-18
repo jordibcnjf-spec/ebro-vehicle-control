@@ -448,7 +448,7 @@ function instalarFichaIndustrial(){
 }
 instalarFichaIndustrial();
 
-for(const [id,max] of [['fila',20]]{for(let i=1;i<=max;i++){const opt=document.createElement('option');opt.value=String(i);opt.textContent=String(i);$(id).append(opt)}}
+for(const [id,max] of [['fila',20]]){for(let i=1;i<=max;i++){const opt=document.createElement('option');opt.value=String(i);opt.textContent=String(i);$(id).append(opt)}}
 function ocrMsg(t,bad=false){$('ocrMessage').textContent=t;$('ocrMessage').className=bad?'error':'muted'}
 $('labelPhoto').addEventListener('change',()=>{if(photoUrl)window.URL.revokeObjectURL(photoUrl);const f=$('labelPhoto').files[0];photoUrl=f?window.URL.createObjectURL(f):null;$('ocrPreview').src=photoUrl||'';$('ocrPreview').style.display=photoUrl?'block':'none';$('ocrReview').style.display='none';ocrConfirmed=false;ocrMsg(f?'Fotografía preparada. Pulsa «Leer etiqueta».':'')});
 $('cancelOcr').addEventListener('click',()=>{if(photoUrl)window.URL.revokeObjectURL(photoUrl);photoUrl=null;$('labelPhoto').value='';$('ocrPreview').removeAttribute('src');$('ocrPreview').style.display='none';$('ocrReview').style.display='none';ocrConfirmed=false;ocrMsg('Fotografía descartada.')});
@@ -958,7 +958,7 @@ async function updateSession(){
  role=data.rol;currentUserId=session.user.id;canManageUsers=role==='administrador'||data.gestiona_usuarios===true;
  canEditProduction=role==='administrador'||(role==='supervisor'&&data.gestiona_usuarios===true&&['david.bergillos','jose.luis'].includes(String(session.user.user_metadata?.usuario||session.user.email?.split('@')[0]||'').toLowerCase()));
  const exportUsername=String(session.user.user_metadata?.usuario||session.user.email?.split('@')[0]||'').trim().toLowerCase();
- canExportVehicles=role==='supervisor'&&data.gestiona_usuarios===true&&['david.bergillos','jose.luis'].includes(exportUsername);
+ canExportVehicles=role==='administrador'||(role==='supervisor'&&data.gestiona_usuarios===true&&['david.bergillos','jose.luis'].includes(exportUsername));
  $('productionExportPanel').style.display=canExportVehicles?'block':'none';
  $('prodGoal').readOnly=!canEditProduction; $('prodSaveGoal').style.display=canEditProduction?'inline-block':'none';
  $('prodGoal').title=canEditProduction?'Modificar previsión diaria':'Solo lectura: únicamente Administrador, Manager y Jefe de Taller pueden modificar previsiones';
@@ -977,7 +977,27 @@ async function updateSession(){
  await load();
 }
 $('togglePassword').addEventListener('click',()=>{const visible=$('password').type==='password';$('password').type=visible?'text':'password';$('togglePassword').setAttribute('aria-pressed',String(visible));$('togglePassword').setAttribute('aria-label',visible?'Ocultar contraseña':'Mostrar contraseña')});
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginBtn').disabled=true;msg('loginMessage','Comprobando acceso...');const {error}=await supabase.auth.signInWithPassword({email:(()=>{const value=$('email').value.trim().toLowerCase().replace(/\s+/g,'');return value.includes('@')?value:value+'@usuarios.ebro.invalid'})(),password:$('password').value});$('loginBtn').disabled=false;if(error){msg('loginMessage','No se ha podido iniciar sesión: '+error.message+'. Comprueba tu usuario y contraseña. Si no recuerdas el usuario, consúltalo al administrador.',true);return}$('password').value='';await updateSession()});
+$('loginForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const btn=$('loginBtn');btn.disabled=true;
+ msg('loginMessage','Comprobando acceso...');
+ try{
+  const value=$('email').value.trim().toLowerCase().replace(/\s+/g,'');
+  const email=value.includes('@')?value:value+'@usuarios.ebro.invalid';
+  const {data,error}=await supabase.auth.signInWithPassword({email,password:$('password').value});
+  if(error)throw new Error('No se ha podido iniciar sesión: '+error.message);
+  if(!data?.session)throw new Error('Supabase no ha devuelto una sesión válida.');
+  await updateSession();
+  if($('app').style.display==='grid'){
+   $('password').value='';msg('loginMessage','');
+  }else if(!$('loginMessage').textContent || $('loginMessage').textContent==='Comprobando acceso...'){
+   msg('loginMessage','Sesión iniciada, pero no se pudo abrir el panel. Revisa los permisos del perfil.',true);
+  }
+ }catch(err){
+  console.error('EBRO FACTORY · acceso:',err);
+  msg('loginMessage','Error de acceso: '+(err?.message||String(err)),true);
+ }finally{btn.disabled=false}
+});
 $('workerForm').addEventListener('submit',async e=>{
  e.preventDefault();
  if(!canManageUsers){msg('workerMessage','No tienes permiso para crear trabajadores.',true);return}
