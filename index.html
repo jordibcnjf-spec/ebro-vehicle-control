@@ -335,6 +335,18 @@ body:not(.factory-logged-out) #userPanel .secondary{background:#333b42;color:#ff
 .material-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:18px 0}.material-controls label{min-width:210px}.material-controls input{margin-top:6px}.material-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:15px 0}.material-metrics>div{background:#383c40;border:1px solid #5b6065;border-radius:12px;padding:19px}.material-metrics span{display:block;color:#d5d9dc;font-size:13px}.material-metrics strong{display:block;color:#ff9b18;font-size:38px;margin-top:8px}.material-metrics>div:nth-child(2) strong{color:#46c77a}.material-metrics>div:nth-child(3) strong{color:#8cb9ff}
 #materialForm{background:#34383c;padding:18px;border-radius:12px;border:1px solid #555b61}#materialPanel label{color:#fff}#materialPanel input{background:#fff;color:#202326}#materialPanel .muted{color:#c5c9cd}#materialPanel button{margin-top:5px}#materialMessage{font-weight:700;min-height:20px}.material-history{margin-top:20px}.material-history table{width:100%;border-collapse:collapse}.material-history th,.material-history td{padding:10px;border-bottom:1px solid #51565b;text-align:left}.material-history th{color:#d1d5d8}.material-history td{color:#fff}.material-production-chart{order:50;width:100%}.material-production-chart .prod-chart-content{min-height:180px!important;max-height:none!important;overflow-x:auto!important}.material-production-chart svg{min-width:440px;max-height:none!important}
 @media(max-width:650px){.material-metrics{grid-template-columns:1fr}.material-metrics>div{padding:12px}.material-metrics strong{font-size:29px}#materialPanel{padding:13px!important}}
+</style><style id="ebro-location-model-chart">
+.location-production-chart{order:49;width:100%}
+.location-production-chart .location-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.location-production-chart .location-head select{background:#252b31;color:#fff;border:1px solid #ff930075;border-radius:8px;padding:9px;min-width:170px;max-width:100%}
+.location-production-chart .location-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:13px 0}
+.location-production-chart .location-summary>div{background:#242a30;border:1px solid #ff930044;border-radius:9px;padding:12px}
+.location-production-chart .location-summary span{display:block;color:#bec5ca;font-size:12px}
+.location-production-chart .location-summary strong{display:block;color:#ff9900;font-size:30px;margin-top:4px}
+.location-production-chart .location-summary>div:nth-child(2) strong{color:#fff}
+.location-bars{display:grid;gap:10px;margin:12px 0 4px}.location-bar-label{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#f5f5f5}.location-track{background:#343c44;height:13px;border-radius:5px;overflow:hidden;margin-top:4px}.location-fill{height:100%;background:#ff9300;border-radius:5px}
+.location-production-chart .location-status{font-size:12px;color:#bdc5cb}
+@media(max-width:520px){.location-production-chart .location-head select{width:100%}}
 </style></head><body class="factory-logged-out"><header><h1>EBRO <span style="font-size:13px;font-weight:500;opacity:.8">FACTORY · Vehicle Control 6.6</span></h1><div id="userPanel"><span id="userEmail" style="font-size:12px"></span> <button class="secondary" id="logout">Salir</button></div></header><main>
 <section class="card" id="login">
   <div class="dark-login-top"><div class="dark-login-mark">🚘 <strong>EBRO <em>FACTORY</em></strong></div><span>VEHICLE CONTROL 6.6</span></div>
@@ -362,7 +374,7 @@ body:not(.factory-logged-out) #userPanel .secondary{background:#333b42;color:#ff
 <section class="ebro-panel" id="prodUnitsPanel" style="display:none"><h3>🚘 Números de unidad · Entradas y salidas</h3><div class="ebro-switch"><button type="button" id="unitsEntries" class="active">↙ Entradas</button><button type="button" id="unitsExits">↗ Salidas</button></div><div class="toolbar"><input id="unitsSearch" placeholder="Buscar número de unidad o modelo"><select id="unitsPeriod"><option value="day">Fecha seleccionada</option><option value="week">Últimos 7 días</option><option value="month">Últimos 30 días</option></select></div><p class="muted" id="unitsCount"></p><div style="overflow-x:auto"><table class="ebro-table"><thead><tr><th>Unidad</th><th>Modelo</th><th>Fecha y hora</th><th>Movimiento</th></tr></thead><tbody id="unitsBody"></tbody></table></div></section>
 <div id="prodChartsPanel"><div class="prod-chart-grid"><section class="prod-chart"><h3>Entradas y salidas · por día</h3><p class="muted">Últimos 7 días</p><div id="movementDaily" class="prod-chart-content"></div></section><section class="prod-chart"><h3>Entradas y salidas · por semana</h3><p class="muted">Últimas 8 semanas</p><div id="movementWeekly" class="prod-chart-content"></div></section></div>
 <div class="prod-chart-grid"><section class="prod-chart"><h3>Previsión frente a vehículos reparados</h3><p class="muted">Últimos 7 días, incluido el seleccionado</p><div id="prodBars" class="prod-chart-content"></div></section><section class="prod-chart"><h3>Evolución de reparaciones</h3><p class="muted">Últimos 7 días</p><div id="prodLine" class="prod-chart-content"></div></section><section class="prod-chart"><h3>Vehículos reparados por modelo</h3><p class="muted">Durante el día seleccionado</p><div id="prodModels" class="prod-chart-content"></div></section><section class="prod-chart"><h3>Resumen mensual</h3><p class="muted">Vehículos reparados por semana del mes</p><div id="prodMonth" class="prod-chart-content"></div></section></div>
-</div><section class="prod-chart material-production-chart" aria-label="Gráfica de material"><h3>📦 Material · Recibido, consumido y sobrante</h3><p class="muted">Comparativa de las últimas 7 jornadas · unidades</p><div id="materialProdChart" class="prod-chart-content"></div><div class="prod-legend"><span><b style="background:#ff9300"></b>Recibido</span><span><b style="background:#46c77a"></b>Consumido</span><span><b style="background:#8cb9ff"></b>Sobrante</span></div></section><section class="prod-finished-panel" aria-label="Vehículos terminados"><h3>🟢 Vehículos terminados · Números de unidad</h3><p class="muted">Unidades actualmente terminadas. Pulsa una unidad para consultar sus defectos, reparadores y fechas.</p><div class="prod-finished-controls"><input id="finishedSearch" placeholder="🔎 Buscar número de unidad o modelo" aria-label="Buscar vehículos terminados"><select id="finishedPeriod" aria-label="Filtrar vehículos terminados"><option value="all">Todos los terminados</option><option value="day">Reparados en fecha seleccionada</option></select></div><p id="finishedCount" class="muted" role="status"></p><div id="finishedUnits" class="prod-finished-list"></div></section><div class="prod-notes-after-finished"><p class="muted">⚠ Limpieza a los 30 días y reincidencias: requieren migración y programación segura en Supabase. No están activadas en esta versión HTML; no se ejecuta ningún borrado automático.</p><p class="muted">Los vehículos reparados se cuentan una vez por unidad, usando la última reparación registrada en el historial y siempre que actualmente todos sus defectos estén terminados. Los registros antiguos sin fecha de reparación no pueden atribuirse a un día. Las entradas y salidas se calculan por fecha registrada, sin duplicar vehículos. Las salidas antiguas sin fecha registrada no se inventan. Los gráficos no incluyen cifras ficticias.</p>
+</div><section class="prod-chart location-production-chart" aria-label="Vehículos por ubicación y modelo"><div class="location-head"><div><h3>🚗 Vehículos por ubicación y modelo</h3><p class="muted">Vehículos actualmente registrados en cada ubicación · sin fila ni plaza</p></div><label for="locationProductionFilter">Ubicación <select id="locationProductionFilter"><option value="">Todas las ubicaciones</option></select></label></div><div class="location-summary"><div><span>Total vehículos</span><strong id="locationProductionTotal">—</strong></div><div><span>Modelos presentes</span><strong id="locationProductionModels">—</strong></div></div><div id="locationProductionBars" class="location-bars"></div><p id="locationProductionStatus" class="location-status" role="status"></p></section><section class="prod-chart material-production-chart" aria-label="Gráfica de material"><h3>📦 Material · Recibido, consumido y sobrante</h3><p class="muted">Comparativa de las últimas 7 jornadas · unidades</p><div id="materialProdChart" class="prod-chart-content"></div><div class="prod-legend"><span><b style="background:#ff9300"></b>Recibido</span><span><b style="background:#46c77a"></b>Consumido</span><span><b style="background:#8cb9ff"></b>Sobrante</span></div></section><section class="prod-finished-panel" aria-label="Vehículos terminados"><h3>🟢 Vehículos terminados · Números de unidad</h3><p class="muted">Unidades actualmente terminadas. Pulsa una unidad para consultar sus defectos, reparadores y fechas.</p><div class="prod-finished-controls"><input id="finishedSearch" placeholder="🔎 Buscar número de unidad o modelo" aria-label="Buscar vehículos terminados"><select id="finishedPeriod" aria-label="Filtrar vehículos terminados"><option value="all">Todos los terminados</option><option value="day">Reparados en fecha seleccionada</option></select></div><p id="finishedCount" class="muted" role="status"></p><div id="finishedUnits" class="prod-finished-list"></div></section><div class="prod-notes-after-finished"><p class="muted">⚠ Limpieza a los 30 días y reincidencias: requieren migración y programación segura en Supabase. No están activadas en esta versión HTML; no se ejecuta ningún borrado automático.</p><p class="muted">Los vehículos reparados se cuentan una vez por unidad, usando la última reparación registrada en el historial y siempre que actualmente todos sus defectos estén terminados. Los registros antiguos sin fecha de reparación no pueden atribuirse a un día. Las entradas y salidas se calculan por fecha registrada, sin duplicar vehículos. Las salidas antiguas sin fecha registrada no se inventan. Los gráficos no incluyen cifras ficticias.</p>
 </div>
 </section><section class="card" id="materialPanel" style="display:none">
  <div class="material-head"><h2>📦 Material · Control de jornada</h2><p>El contador comienza a cero cada día. Los días anteriores quedan guardados para consulta.</p></div>
@@ -1210,7 +1222,7 @@ async function autoRefreshProduction(){
  try{
   // Releer vehículos y defectos para mantener actualizados también los indicadores.
   await load();
-  await loadProduction();
+  await Promise.all([loadProduction(),loadLocationProduction()]);
  }finally{productionRefreshing=false;}
 }
 setInterval(autoRefreshProduction,60000);
@@ -1278,11 +1290,57 @@ $('prodReload').addEventListener('click',renderMaterialProduction);
 // Al cambiar de jornada, se consulta la nueva fecha; los datos antiguos no se eliminan.
 let lastMaterialDay=materialToday();setInterval(()=>{const now=materialToday();if(now!==lastMaterialDay){lastMaterialDay=now;if($('materialPanel').style.display==='block'){$('materialDate').value=now;loadMaterial()}if($('productionPanel').style.display==='block')renderMaterialProduction()}},60000);
 
+
+// EBRO 6.6 · Ocupación actual por ubicación. Lectura únicamente, sin modificar Supabase.
+let locationProductionRows=[];
+let locationProductionRequest=0;
+function renderLocationProduction(){
+ const select=$('locationProductionFilter'), root=$('locationProductionBars');
+ const current=select.value;
+ const locations=[...new Set(locationProductionRows.map(v=>String(v.zona||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+ select.replaceChildren(new Option('Todas las ubicaciones',''),...locations.map(z=>new Option(z,z)));
+ select.value=locations.includes(current)?current:'';
+ const selected=select.value;
+ const subset=locationProductionRows.filter(v=>!selected||String(v.zona||'').trim()===selected);
+ const counts=new Map();for(const v of subset){const model=String(v.modelo||'Sin modelo').trim()||'Sin modelo';counts.set(model,(counts.get(model)||0)+1)}
+ $('locationProductionTotal').textContent=subset.length;
+ $('locationProductionModels').textContent=counts.size;
+ root.replaceChildren();
+ const ordered=[...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es'));
+ const max=Math.max(1,...ordered.map(v=>v[1]));
+ if(!ordered.length){root.append(el('p','No hay vehículos registrados en esta ubicación.','muted'));return}
+ for(const [model,n] of ordered){
+  const item=el('div');const label=el('div',undefined,'location-bar-label');label.append(el('span',model),el('strong',String(n)));
+  const track=el('div',undefined,'location-track');const fill=el('div',undefined,'location-fill');fill.style.width=(100*n/max)+'%';track.append(fill);item.append(label,track);root.append(item);
+ }
+}
+async function loadLocationProduction(){
+ const request=++locationProductionRequest;
+ $('locationProductionStatus').textContent='Actualizando ocupación…';
+ const all=[];const size=500;
+ try{
+  for(let from=0;from<100000;from+=size){
+   const {data,error}=await supabase.from('vehiculos').select('id,modelo,zona,fecha_salida').order('id',{ascending:true}).range(from,from+size-1);
+   if(error)throw error;
+   if(request!==locationProductionRequest)return;
+   all.push(...(data||[]));
+   if(!data||data.length<size)break;
+   if(from+size>=100000)throw new Error('Se alcanzó el límite de consulta.');
+  }
+  // Una salida registrada indica que la unidad ya no ocupa su antigua ubicación.
+  locationProductionRows=all.filter(v=>!v.fecha_salida);
+  renderLocationProduction();
+  $('locationProductionStatus').textContent='Ocupación actual · '+locationProductionRows.length+' vehículos sin salida registrada.';
+ }catch(e){if(request!==locationProductionRequest)return;$('locationProductionStatus').textContent='No se pudo actualizar la ocupación: '+e.message;}
+}
+$('locationProductionFilter').addEventListener('change',renderLocationProduction);
+$('prodReload').addEventListener('click',loadLocationProduction);
+
 function showSection(id){
  if(id==='workersPanel'&&!canManageUsers)id='dashboard';
  for(const section of ['dashboard','vehicleSection','workersPanel','productionPanel','materialPanel'])$(section).style.display=section===id?'block':'none';
  document.querySelectorAll('.nav-link').forEach(btn=>btn.classList.toggle('active',btn.dataset.target===id));
- if(id==='workersPanel')listWorkers();if(id==='productionPanel')load().then(()=>Promise.all([loadProduction(),renderMaterialProduction()]));if(id==='materialPanel')loadMaterial();
+ if(id==='workersPanel')listWorkers();if(id==='productionPanel'){loadLocationProduction();load().then(()=>Promise.all([loadProduction(),renderMaterialProduction()]));}if(id==='materialPanel')loadMaterial();
  window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.nav-link').forEach(btn=>btn.addEventListener('click',()=>showSection(btn.dataset.target)));
