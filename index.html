@@ -1022,7 +1022,7 @@ async function updateSession(){
  $('userEmail').textContent=(session.user.email||'').endsWith('@usuarios.ebro.invalid')?(session.user.user_metadata?.usuario||session.user.email.split('@')[0]):(session.user.email||'');
  const {data,error}=await supabase.from('perfiles').select('rol,activo,gestiona_usuarios,nombre').eq('id',session.user.id).single();
  if(error||!data?.activo){$('app').style.display='none';document.body.classList.add('factory-logged-out');$('login').style.display='grid';msg('loginMessage','El perfil no está disponible o está desactivado. Consulta al administrador.',true);return}
- role=data.rol;currentUserId=session.user.id;const isPablo=data.nombre==='Pablo Camina'&&role==='operario';canManageUsers=role==='administrador';
+ role=data.rol;currentUserId=session.user.id;const isPablo=data.nombre==='Pablo Camina'&&role==='operario';canManageUsers=role==='administrador'||(['manager','jefe_taller'].includes(role)&&data.gestiona_usuarios===true);
  canEditProduction=['administrador','manager','jefe_taller'].includes(role);
  const exportUsername=String(session.user.user_metadata?.usuario||session.user.email?.split('@')[0]||'').trim().toLowerCase();
  canExportVehicles=['administrador','manager','jefe_taller'].includes(role);
