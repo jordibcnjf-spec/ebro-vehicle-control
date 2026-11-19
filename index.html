@@ -337,6 +337,15 @@ body:not(.factory-logged-out) #userPanel .secondary{background:#333b42;color:#ff
 .location-mini-row b{color:#ffad42}
 .location-mini-empty{font-size:11px;color:#9da7b0;margin:3px 0}
 .location-production-chart .location-status{margin:7px 0 0;font-size:11px}
+
+/* Formulario de defectos en vehículos existentes: diseño de la ficha de registro */
+.defect-add-existing{background:#20262c!important;color:#f6f6f6!important;border:1px solid #515b65!important;border-radius:14px!important;padding:18px!important}
+.defect-add-existing h4,.defect-add-existing label{color:#fff!important;font-weight:700}
+.defect-add-existing .muted{color:#cbd0d6!important}
+.defect-add-existing select,.defect-add-existing input{background:#fff!important;color:#20252a!important;min-height:48px;border:1px solid #9ca4ac!important}
+.defect-add-existing button:not(.secondary){background:#ff9000!important;color:#171717!important}
+.defect-add-existing .defect-item{background:#373c42!important;color:#fff!important}
+@media(max-width:620px){.defect-add-existing .grid{grid-template-columns:1fr!important}}
 </style>
 <style id="ebro-production-order-final">
 /* Control y producción: panel de terminados siempre al final. */
@@ -906,22 +915,57 @@ function crearPanelDefectos(v){
   panel.append(item);
  }
  if(canManageDefects){
-  const form=document.createElement('form');form.className='defect-add';
-  const label=el('label','Añadir un defecto');const input=document.createElement('textarea');input.placeholder='Describe el defecto y su ubicación';input.required=true;input.maxLength=1800;
-  const btn=el('button','Añadir defecto');btn.type='submit';
-  form.append(label,input,btn);
-  form.addEventListener('submit',async e=>{
-   e.preventDefault();const descripcion=input.value.trim();if(!descripcion)return;
-   btn.disabled=true;
-   try{
-    const {data:auth}=await supabase.auth.getUser();
-    if(!auth?.user?.id)throw new Error('Inicia sesión de nuevo.');
-    const {error}=await supabase.from('defectos').insert({vehiculo_id:v.id,descripcion,estado:'Pendiente',creado_por:auth.user.id});
-    if(error)throw error;
+  // Mismo formulario de tipo, zona y lista que en Registrar vehículo.
+  const form=document.createElement('form');form.className='defect-add defect-add-existing';
+  const heading=el('h4','🔧 Añadir defectos al vehículo '+v.bastidor);
+  const help=el('p','Selecciona el tipo de fallo y la zona del vehículo. Añade una descripción opcional y pulsa «Añadir a la lista».','muted');
+  const grid=el('div',undefined,'grid');grid.style.cssText='margin:10px 0;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px';
+  const tipoBox=el('div'),zonaBox=el('div');
+  const tipoLabel=el('label','Tipo de fallo *');const tipo=document.createElement('select');tipo.required=false;
+  const zonaLabel=el('label','Zona del vehículo *');const zona=document.createElement('select');
+  // Reutilizar exactamente las opciones del formulario de registro.
+  for(const option of $('tipoFalloNuevo').options)tipo.add(new Option(option.text,option.value));
+  for(const option of $('zonaAfectadaNueva').options)zona.add(new Option(option.text,option.value));
+  tipoBox.append(tipoLabel,tipo);zonaBox.append(zonaLabel,zona);grid.append(tipoBox,zonaBox);
+  const detalle=document.createElement('input');detalle.type='text';detalle.maxLength=1800;detalle.placeholder='Ej. Arañazo en paragolpes delantero';detalle.setAttribute('autocomplete','off');
+  const catalogo=document.createElement('datalist');catalogo.id='catalogoExistente_'+v.id;detalle.setAttribute('list',catalogo.id);
+  const acciones=el('div',undefined,'toolbar');acciones.style.marginTop='8px';
+  const agregar=el('button','+ Añadir a la lista');agregar.type='button';
+  const recargar=el('button','↻ Actualizar catálogo','secondary');recargar.type='button';
+  acciones.append(agregar,recargar);
+  const lista=el('div');lista.style.marginTop='10px';lista.setAttribute('aria-live','polite');
+  const feedback=el('p',undefined,'muted');feedback.setAttribute('role','status');
+  const guardar=el('button','Guardar defectos');guardar.type='submit';
+  const pendientes=[];
+  function pintar(){lista.replaceChildren();if(!pendientes.length){lista.append(el('p','Ningún defecto añadido todavía.','muted'));return}
+   pendientes.forEach((desc,i)=>{const fila=el('div',undefined,'defect-item');fila.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px';fila.append(el('span',desc));const quitar=el('button','Quitar','secondary');quitar.type='button';quitar.addEventListener('click',()=>{pendientes.splice(i,1);pintar()});fila.append(quitar);lista.append(fila)})}
+  function anadir(){const t=tipo.value,z=zona.value,d=detalle.value.trim().replace(/\s+/g,' ');
+   if(!t||!z){feedback.textContent='Selecciona el tipo de fallo y la zona del vehículo.';return false}
+   const desc=t+' | '+z+(d?' | '+d:'');
+   if(pendientes.some(x=>x.toLocaleLowerCase('es')===desc.toLocaleLowerCase('es'))){feedback.textContent='Ese defecto ya está en la lista.';return false}
+   pendientes.push(desc);tipo.value='';zona.value='';detalle.value='';feedback.textContent='';pintar();return true}
+  agregar.addEventListener('click',anadir);
+  detalle.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();anadir()}});
+  async function actualizarCatalogo(){recargar.disabled=true;try{const {data,error}=await supabase.from('catalogo_defectos').select('descripcion').order('descripcion').limit(3000);if(error)throw error;catalogo.replaceChildren();for(const x of data||[])catalogo.append(new Option(x.descripcion,x.descripcion));feedback.textContent='Catálogo actualizado.'}catch(err){feedback.textContent='No se pudo cargar el catálogo: '+err.message}finally{recargar.disabled=false}}
+  recargar.addEventListener('click',actualizarCatalogo);
+  form.addEventListener('submit',async e=>{e.preventDefault();
+   if(tipo.value||zona.value||detalle.value.trim()){if(!anadir())return}
+   if(!pendientes.length){feedback.textContent='Añade al menos un defecto a la lista.';return}
+   guardar.disabled=true;agregar.disabled=true;feedback.textContent='Guardando defectos...';
+   try{const {data:auth,error:authError}=await supabase.auth.getUser();if(authError||!auth?.user?.id)throw new Error('Inicia sesión de nuevo.');
+    const {data:existentes,error:readError}=await supabase.from('defectos').select('descripcion').eq('vehiculo_id',v.id);if(readError)throw readError;
+    const ya=new Set((existentes||[]).map(x=>x.descripcion.trim().toLocaleLowerCase('es')));
+    const nuevos=pendientes.filter(x=>!ya.has(x.toLocaleLowerCase('es')));
+    if(!nuevos.length)throw new Error('Todos los defectos de la lista ya existen en este vehículo.');
+    const {error}=await supabase.from('defectos').insert(nuevos.map(descripcion=>({vehiculo_id:v.id,descripcion,estado:'Pendiente',creado_por:auth.user.id})));if(error)throw error;
+    // El catálogo es opcional: un fallo aquí nunca deshace los defectos guardados.
+    for(const descripcion of nuevos){const {error:catError}=await supabase.from('catalogo_defectos').insert({descripcion});if(catError&&catError.code!=='23505')console.warn('Catálogo:',catError.message)}
     await load();
-   }catch(err){alert('No se pudo añadir el defecto: '+err.message)}finally{btn.disabled=false}
-  });panel.append(form);
+   }catch(err){feedback.textContent='No se pudieron guardar los defectos: '+err.message}finally{guardar.disabled=false;agregar.disabled=false}
+  });
+  form.append(heading,help,grid,detalle,catalogo,acciones,lista,guardar,feedback);panel.append(form);pintar();
  }
+
  return panel;
 }
 
