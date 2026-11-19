@@ -445,7 +445,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const URL='https://howmudtxhfsjtoypuyzg.supabase.co';
 const KEY='sb_publishable_XHJ-WhIBfqZ8b4ZuX21acA_VLhSNWlC';
 const supabase=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
-const $=id=>document.getElementById(id);let defectosPorVehiculo={};let estadoPorVehiculo={};let records=[];let role='';let photoUrl=null;let ocrConfirmed=false;let existingId=null;let checkedUnit='';let lookupSequence=0;let canEdit=false;let canCreate=false;let canDelete=false;let currentPage=1;const pageSize=6;const MAX_WORKERS=20;let workerCount=null;let canManageUsers=false;let canEditProduction=false;let canExportVehicles=false;let currentUserId="";let vehicleView="cards";let unitMovement="entry";let repairLogByDefect={};let repairNames={};
+const $=id=>document.getElementById(id);let defectosPorVehiculo={};let estadoPorVehiculo={};let records=[];let role='';let photoUrl=null;let ocrConfirmed=false;let existingId=null;let checkedUnit='';let lookupSequence=0;let canEdit=false;let canCreate=false;let canDelete=false;let canManageDefects=false;let currentPage=1;const pageSize=6;const MAX_WORKERS=20;let workerCount=null;let canManageUsers=false;let canEditProduction=false;let canExportVehicles=false;let currentUserId="";let vehicleView="cards";let unitMovement="entry";let repairLogByDefect={};let repairNames={};
 
 // Reorganiza los controles originales sin sustituir sus IDs ni sus manejadores de Supabase.
 function instalarFichaIndustrial(){
@@ -812,7 +812,7 @@ $('unidad').addEventListener('blur',()=>{if($('unidad').value.trim().toUpperCase
 $('newVehicle').addEventListener('click',()=>{lookupSequence++;$('vehicleForm').reset();defectosEntrada=[];pintarDefectosEntrada();updateVinSuffix();$('cancelOcr').click();resetExisting();msg('saveMessage','Formulario limpio.')});
 function msg(id,text,error=false){$(id).textContent=text;$(id).className=error?'error':'ok'}
 function el(tag,txt,cls){const x=document.createElement(tag);if(txt!==undefined)x.textContent=txt;if(cls)x.className=cls;return x}
-function estadoVisual(v){const ds=defectosPorVehiculo[v.id]||[];if(!ds.length)return 'Sin defectos';return ds.every(d=>d.estado==='Terminado'||d.estado==='Reparado')?'Terminado':'Pendiente'}
+function estadoVisual(v){if(v.estado==='Terminado')return 'Terminado';if(v.estado==='Pendiente')return 'Pendiente';const ds=defectosPorVehiculo[v.id]||[];if(!ds.length)return 'Sin defectos';return ds.every(d=>d.estado==='Terminado'||d.estado==='Reparado')?'Terminado':'Pendiente'}
 function makeRepairHistory(v){
  const box=el('section',undefined,'repair-history');box.append(el('h4','👤 Historial · Quién ha reparado'));
  const ds=defectosPorVehiculo[v.id]||[];const repairs=ds.flatMap(d=>(repairLogByDefect[String(d.id)]||[]).map(r=>({...r,defecto:d.descripcion}))).sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
@@ -840,6 +840,7 @@ function render(){
   const ds=defectosPorVehiculo[v.id]||[];if(ds.length){const brief=el('div',undefined,'defect-brief');brief.append(el('strong',`Defectos (${ds.length})`));for(const d of ds.slice(0,3)){const line=el('div',undefined,'defect-brief-line');line.append(el('span',d.descripcion),el('span',d.estado==='Pendiente'?'◷ Pendiente':'✓ Terminado',d.estado==='Pendiente'?'pending-text':'done-text'));brief.append(line)}if(ds.length>3)brief.append(el('small',`+ ${ds.length-3} defectos más`));card.append(brief)}
   const actions=el('div',undefined,'vehicle-actions');
   if(canEdit){const edit=el('button','Modificar','secondary');edit.type='button';edit.addEventListener('click',()=>{lookupSequence++;$('vehicleForm').reset();defectosEntrada=[];pintarDefectosEntrada();$('cancelOcr').click();$('unidad').value=v.bastidor||'';applyExisting(v);$('saveMessage').textContent='';showSection('vehicleSection')});actions.append(edit)}
+  if(canManageDefects){const statusBtn=el('button',v.estado==='Terminado'?'↩ Volver a Pendiente':'✓ Marcar Terminado','secondary');statusBtn.type='button';statusBtn.addEventListener('click',async()=>{const next=v.estado==='Terminado'?'Pendiente':'Terminado';if(!confirm('¿Cambiar el estado de '+v.bastidor+' a '+next+'?'))return;statusBtn.disabled=true;try{const {error}=await supabase.rpc('ebro_cambiar_estado_vehiculo',{p_vehiculo_id:v.id,p_estado:next});if(error)throw error;await load()}catch(e){alert('No se pudo cambiar el estado: '+e.message)}finally{statusBtn.disabled=false}});actions.append(statusBtn)}
   if(canDelete){const del=el('button','Eliminar','danger');del.type='button';del.addEventListener('click',()=>deleteVehicle(v));actions.append(del)}
   if(canEditProduction){const dateButton=el('button','📅 Corregir fechas','secondary');dateButton.type='button';dateButton.addEventListener('click',()=>openDateEditor(v,card));actions.append(dateButton)}
    const details=document.createElement('details');details.className='vehicle-details';const summary=document.createElement('summary');summary.textContent='Gestionar defectos y vehículo';details.append(summary,crearPanelDefectos(v),makeRepairHistory(v),actions);card.append(details);$('vehicles').append(card);
@@ -878,7 +879,7 @@ function crearPanelDefectos(v){
  for(const d of defects){
   const item=el('div',undefined,'defect-item');
   item.append(el('strong',d.descripcion),el('span',' · '+(d.estado==='Reparado'?'Terminado':d.estado),'pill'));
-  if(canEdit){
+  if(canManageDefects){
    const controls=el('div',undefined,'vehicle-actions');
    const selector=document.createElement('select');selector.style.maxWidth='190px';selector.setAttribute('aria-label','Estado de '+d.descripcion);
    for(const estado of ['Pendiente','Terminado']){const o=document.createElement('option');o.value=estado;o.textContent=estado;selector.append(o)}
@@ -904,7 +905,7 @@ function crearPanelDefectos(v){
   }
   panel.append(item);
  }
- if(canEdit){
+ if(canManageDefects){
   const form=document.createElement('form');form.className='defect-add';
   const label=el('label','Añadir un defecto');const input=document.createElement('textarea');input.placeholder='Describe el defecto y su ubicación';input.required=true;input.maxLength=1800;
   const btn=el('button','Añadir defecto');btn.type='submit';
@@ -977,23 +978,23 @@ async function updateSession(){
  $('userEmail').textContent=(session.user.email||'').endsWith('@usuarios.ebro.invalid')?(session.user.user_metadata?.usuario||session.user.email.split('@')[0]):(session.user.email||'');
  const {data,error}=await supabase.from('perfiles').select('rol,activo,gestiona_usuarios,nombre').eq('id',session.user.id).single();
  if(error||!data?.activo){$('app').style.display='none';document.body.classList.add('factory-logged-out');$('login').style.display='grid';msg('loginMessage','El perfil no está disponible o está desactivado. Consulta al administrador.',true);return}
- role=data.rol;currentUserId=session.user.id;canManageUsers=role==='administrador'||data.gestiona_usuarios===true;
- canEditProduction=role==='administrador'||(role==='supervisor'&&data.gestiona_usuarios===true&&['david.bergillos','jose.luis'].includes(String(session.user.user_metadata?.usuario||session.user.email?.split('@')[0]||'').toLowerCase()));
+ role=data.rol;currentUserId=session.user.id;const isPablo=data.nombre==='Pablo Camina'&&role==='operario';canManageUsers=role==='administrador';
+ canEditProduction=['administrador','manager','jefe_taller'].includes(role);
  const exportUsername=String(session.user.user_metadata?.usuario||session.user.email?.split('@')[0]||'').trim().toLowerCase();
- canExportVehicles=role==='administrador'||(role==='supervisor'&&data.gestiona_usuarios===true&&['david.bergillos','jose.luis'].includes(exportUsername));
+ canExportVehicles=['administrador','manager','jefe_taller'].includes(role);
  $('productionExportPanel').style.display=canExportVehicles?'block':'none';
  $('prodGoal').readOnly=!canEditProduction; $('prodSaveGoal').style.display=canEditProduction?'inline-block':'none';
  $('prodGoal').title=canEditProduction?'Modificar previsión diaria':'Solo lectura: únicamente Administrador, Manager y Jefe de Taller pueden modificar previsiones';
   const username=String(session.user.user_metadata?.usuario||session.user.email?.split('@')[0]||'').toLowerCase();
-  const displayName=username==='david.bergillos'?'David Bergillos · Manager':username==='jose.luis'?'Jose Luis · Jefe de Taller':(data.nombre||$('userEmail').textContent)+' · '+(role==='administrador'?'Administrador':role==='jefe_equipo'?'Jefe de equipo':role==='supervisor'?'Supervisor':'Operario');
+  const displayName=username==='david.bergillos'?'David Bergillos · Manager':username==='jose.luis'?'Jose Luis · Jefe de Taller':(data.nombre||$('userEmail').textContent)+' · '+(role==='administrador'?'Administrador':role==='jefe_equipo'?'Jefe de equipo':role==='supervisor'?'Supervisor':role==='manager'?'Manager':role==='jefe_taller'?'Jefe de taller':'Operario');
   $('userEmail').textContent=displayName;
-  $('workersNav').style.display=canManageUsers?'block':'none';$('productionNav').style.display='block';showSection('vehicleSection');
+  $('workersNav').style.display=canManageUsers?'block':'none';$('productionNav').style.display=role==='operario'?'none':'block';$('materialNav').style.display=role==='operario'?'none':'block';document.querySelector('[data-target="vehicleSection"]').style.display=role==='operario'&&!isPablo?'none':'block';showSection(role==='operario'?'dashboard':'vehicleSection');
  if(canManageUsers)listWorkers();
- canCreate=['administrador','supervisor','jefe_equipo'].includes(role);
- canDelete=canCreate;
- canEdit=canCreate||role==='operario';
+ canCreate=['administrador','manager','jefe_taller','supervisor','jefe_equipo'].includes(role)||isPablo;
+ canDelete=role==='administrador';
+ canEdit=canCreate;canManageDefects=['administrador','manager','jefe_taller','supervisor','jefe_equipo','operario'].includes(role);
  $('vehicleForm').style.display=canEdit?'block':'none';
- $('roleNotice').textContent=canCreate?'Tu perfil ('+role+') permite crear, modificar y eliminar vehículos.':role==='operario'?'Perfil operario: puedes modificar unidades existentes, pero no crear ni eliminar.':'Tu perfil ('+role+') solo permite consultar vehículos.';
+ $('roleNotice').textContent=canCreate?'Tu perfil permite crear y modificar vehículos.':role==='operario'?'Perfil operario: puedes gestionar defectos y estados, pero no modificar la ficha general.':'Tu perfil solo permite consultar vehículos.';
  resetExisting();
  if(!canEdit)$('formHeading').textContent='Consulta de vehículos';
  await load();
@@ -1399,7 +1400,7 @@ async function loadLocationProduction(){
 $('prodReload').addEventListener('click',loadLocationProduction);
 
 function showSection(id){
- if(id==='workersPanel'&&!canManageUsers)id='dashboard';
+ if(id==='workersPanel'&&!canManageUsers)id='dashboard';if(role==='operario'&&!['dashboard',...(canCreate?['vehicleSection']:[])].includes(id))id='dashboard';
  for(const section of ['dashboard','vehicleSection','workersPanel','productionPanel','materialPanel'])$(section).style.display=section===id?'block':'none';
  document.querySelectorAll('.nav-link').forEach(btn=>btn.classList.toggle('active',btn.dataset.target===id));
  if(id==='workersPanel')listWorkers();if(id==='productionPanel'){loadLocationProduction();load().then(()=>Promise.all([loadProduction(),renderMaterialProduction()]));}if(id==='materialPanel')loadMaterial();
@@ -1429,7 +1430,7 @@ function renderMovementUnits(){
 }
 const workerButtons=[$('workersShowList'),$('workersShowPermissions'),$('workersShowActivity')];
 function showWorkerTab(kind){const btn=kind==='list'?workerButtons[0]:kind==='permissions'?workerButtons[1]:workerButtons[2];ebroSelectButtons(workerButtons,btn);$('workersMain').style.display=kind==='list'?'block':'none';$('workerForm').style.display=kind==='list'?'block':'none';const box=$('workersExtra');box.style.display=kind==='list'?'none':'block';box.replaceChildren();
- if(kind==='permissions'){box.append(el('h3','Permisos de acceso'));for(const [name,items] of [['Operario','Consultar y modificar vehículos y reparaciones según RLS'],['Jefe de equipo / Supervisor','Funciones autorizadas por el perfil y las políticas de Supabase'],['Administrador','Gestión de usuarios y operaciones protegidas']]){box.append(el('strong',name),el('p',items,'muted'))}box.append(el('p','Los permisos efectivos los determina Supabase; esta vista no modifica roles.','muted'))}
+ if(kind==='permissions'){box.append(el('h3','Permisos de acceso'));for(const [name,items] of [['Operario','Consultar vehículos, gestionar defectos y cambiar estados; sin editar fichas generales'],['Jefe de equipo / Supervisor','Funciones autorizadas por el perfil y las políticas de Supabase'],['Administrador','Gestión de usuarios y operaciones protegidas']]){box.append(el('strong',name),el('p',items,'muted'))}box.append(el('p','Los permisos efectivos los determina Supabase; esta vista no modifica roles.','muted'))}
  if(kind==='activity'){box.append(el('h3','Actividad de reparaciones'));const all=Object.values(repairLogByDefect).flat().sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha))).slice(0,30);if(!all.length)box.append(el('p','No hay actividad visible.','muted'));for(const r of all){const line=el('div',undefined,'repair-entry');line.append(el('strong',repairNames[String(r.realizado_por)]||(r.realizado_por?'Usuario sin nombre visible · ID '+String(r.realizado_por).slice(0,8):'Sin autor registrado')),el('span',' · '+(r.fecha?new Date(r.fecha).toLocaleString('es-ES'):'Sin fecha')+' · '+(r.descripcion||'Reparación')));box.append(line)}}
 }
 workerButtons[0].addEventListener('click',()=>showWorkerTab('list'));workerButtons[1].addEventListener('click',()=>showWorkerTab('permissions'));workerButtons[2].addEventListener('click',()=>showWorkerTab('activity'));
