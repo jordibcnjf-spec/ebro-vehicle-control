@@ -426,7 +426,13 @@ body:not(.factory-logged-out) #dashboard .extra-filters input::placeholder{color
 </style><style id="ebro-export-css">.production-export-panel{margin-top:18px!important;border:1px solid #ff930055!important}.production-export-panel h3{color:#ff9b18}.export-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:12px 0}.export-controls label{color:#eee;font-size:13px;min-width:170px}.export-controls select{display:block;margin-top:5px;background:#292d31;color:#fff;border:1px solid #60656a;min-width:170px}.export-controls button{background:#ff9300;color:#1b1b1b}.export-controls button.secondary{background:#4b535b;color:#fff}.export-controls button:disabled{opacity:.5}</style><style id="ebro67-hide-time-history">/* Ocultación temporal: no borrar datos ni desmontar componentes JS */
 #ebro67TimeBox { display: none !important; }
 </style>
-</head><body class="factory-logged-out"><header><h1>EBRO <span style="font-size:13px;font-weight:500;opacity:.8">FACTORY · Vehicle Control 6.6</span></h1><div id="userPanel"><span id="userEmail" style="font-size:12px"></span> <button class="secondary" id="logout">Salir</button></div></header><main>
+<style id="ebro-location-units-list">
+.location-unit-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.location-unit-actions button{padding:8px 10px;font-size:12px}
+.location-unit-details{margin-top:12px;border-top:1px solid #62676d;padding-top:12px}.location-unit-details[hidden]{display:none!important}
+.location-unit-filter-label{display:block;color:#fff!important;font-size:12px;margin-bottom:9px}.location-unit-filter-label select{display:block;margin-top:5px;max-width:280px;color:#17191b;background:#fff}
+.location-unit-table-wrap{max-height:330px;overflow:auto}.location-unit-table{width:100%;border-collapse:collapse;font-size:12px;min-width:590px}
+.location-unit-table th,.location-unit-table td{padding:7px;border-bottom:1px solid #656b71;text-align:left;color:#f7f7f7}.location-unit-table th{position:sticky;top:0;background:#33383e;color:#ffad3c}
+</style></head><body class="factory-logged-out"><header><h1>EBRO <span style="font-size:13px;font-weight:500;opacity:.8">FACTORY · Vehicle Control 6.6</span></h1><div id="userPanel"><span id="userEmail" style="font-size:12px"></span> <button class="secondary" id="logout">Salir</button></div></header><main>
 <section class="card" id="login">
   <div class="dark-login-top"><div class="dark-login-mark">🚘 <strong>EBRO <em>FACTORY</em></strong></div><span>VEHICLE CONTROL 6.7</span></div>
   <div class="dark-login-photo"><img id="ebroOriginalPhoto" alt="EBRO S900 PHEV" src="https://images.openai.com/static-rsc-4/V-IDn2hJFWWmPeEIATK_QLGStRPTRPl8inhpszv0zazCNt_Aj7NtE7wBEacvpyLkH-du281hTcIIMMWwCqAUY8lp54IZu-sohUe5-q9ccQMBPfOi9GlZplPeKNkkdL0FJZ_quK4nYu7POvKR8TvrLKgSBCBEGc92gue8IE3ZNzI?purpose=inline" loading="eager"></div>
@@ -1589,6 +1595,41 @@ function renderLocationProduction(){
   const card=el('div',undefined,'location-mini-card');const header=el('div',undefined,'location-mini-header');const total=[...models.values()].reduce((a,b)=>a+b,0);header.append(el('strong',zona),el('span',String(total)+' 🚗'));card.append(header);
   if(!models.size)card.append(el('p','Sin vehículos','location-mini-empty'));
   else for(const [model,count] of [...models].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'es'))){const line=el('div',undefined,'location-mini-row');line.append(el('span',model),el('b',String(count)));card.append(line)}
+  if(total){
+   const actions=el('div',undefined,'location-unit-actions');
+   const view=document.createElement('button');view.type='button';view.className='secondary';view.textContent='Ver unidades';
+   const download=document.createElement('button');download.type='button';download.textContent='⬇ Descargar zona';
+   const details=el('div',undefined,'location-unit-details');details.hidden=true;
+   const modelLabel=el('label','Filtrar por modelo','location-unit-filter-label');
+   const select=document.createElement('select');select.setAttribute('aria-label','Modelo en '+zona);
+   select.add(new Option('Todos los modelos',''));
+   for(const model of [...models.keys()].sort((a,b)=>a.localeCompare(b,'es')))select.add(new Option(model,model));
+   modelLabel.append(select);
+   const tableWrap=el('div',undefined,'location-unit-table-wrap');
+   const count=el('p',undefined,'muted');
+   const rowsForZone=()=>locationProductionRows.filter(v=>(String(v.zona||'').trim()||'Sin ubicación')===zona && (!select.value||(String(v.modelo||'').trim()||'Sin modelo')===select.value));
+   const refresh=()=>{
+    const rows=rowsForZone();count.textContent=rows.length+' unidades';
+    const table=document.createElement('table');table.className='location-unit-table';
+    const head=document.createElement('thead'),tr=document.createElement('tr');
+    for(const h of ['N.º unidad','Modelo','Color','Estado','Fila','Plaza','Salida']){const th=document.createElement('th');th.textContent=h;tr.append(th)}head.append(tr);table.append(head);
+    const body=document.createElement('tbody');
+    for(const v of rows){const line=document.createElement('tr');for(const value of [v.bastidor,v.modelo,v.color,v.estado,v.fila,v.plaza,v.fecha_salida?'Sí':'No']){const td=document.createElement('td');td.textContent=String(value??'');line.append(td)}body.append(line)}
+    table.append(body);tableWrap.replaceChildren(table);
+   };
+   view.addEventListener('click',()=>{details.hidden=!details.hidden;view.textContent=details.hidden?'Ver unidades':'Ocultar unidades';if(!details.hidden)refresh()});
+   select.addEventListener('change',refresh);
+   download.addEventListener('click',()=>{
+    if(!canExportVehicles){$('locationProductionStatus').textContent='No tienes permiso para descargar listados de vehículos.';return}
+    const rows=rowsForZone();if(!rows.length)return;
+    const cols=[['bastidor','N.º unidad'],['modelo','Modelo'],['color','Color'],['estado','Estado'],['zona','Zona'],['fila','Fila'],['plaza','Plaza'],['fecha_salida','Fecha salida']];
+    const safe=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+    const csv='\uFEFF'+[cols.map(c=>safe(c[1])).join(';'),...rows.map(v=>cols.map(c=>safe(v[c[0]])).join(';'))].join('\r\n');
+    const slug=zona.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_').slice(0,55);
+    exportDownload(new Blob([csv],{type:'text/csv;charset=utf-8;'}),'EBRO_UNIDADES_'+slug+'_'+new Date().toISOString().slice(0,10)+'.csv');
+   });
+   actions.append(view,download);details.append(modelLabel,count,tableWrap);card.append(actions,details);
+  }
   root.append(card);
  }
  root.style.display=locationProductionOpen?'grid':'none';
@@ -1602,17 +1643,17 @@ async function loadLocationProduction(){
  const all=[];const size=500;
  try{
   for(let from=0;from<100000;from+=size){
-   const {data,error}=await supabase.from('vehiculos').select('id,modelo,zona,fecha_salida').order('id',{ascending:true}).range(from,from+size-1);
+   const {data,error}=await supabase.from('vehiculos').select('id,bastidor,modelo,color,estado,zona,fila,plaza,fecha_salida').order('id',{ascending:true}).range(from,from+size-1);
    if(error)throw error;
    if(request!==locationProductionRequest)return;
    all.push(...(data||[]));
    if(!data||data.length<size)break;
    if(from+size>=100000)throw new Error('Se alcanzó el límite de consulta.');
   }
-  // Una salida registrada indica que la unidad ya no ocupa su antigua ubicación.
-  locationProductionRows=all.filter(v=>!v.fecha_salida);
+  // Listado completo: incluir vehículos pendientes, terminados y con salida registrada.
+  locationProductionRows=all;
   renderLocationProduction();
-  $('locationProductionStatus').textContent='Ocupación actual · '+locationProductionRows.length+' vehículos sin salida registrada.';
+  $('locationProductionStatus').textContent='Listado de vehículos registrados · '+locationProductionRows.length+' unidades (incluye salidas).';
  }catch(e){if(request!==locationProductionRequest)return;$('locationProductionStatus').textContent='No se pudo actualizar la ocupación: '+e.message;}
 }
 
