@@ -365,6 +365,14 @@ body:not(.factory-logged-out) #userPanel .secondary{background:#333b42;color:#ff
 .ebro-clock-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .ebro-clock-actions button{font-size:12px;padding:9px 11px}
 .ebro-clock-panel .ebro-clock-error{color:#ffb4a7}
+
+/* 6.7: tiempos y recuperaciones, lectura segura */
+.ebro67-box{border:1px solid #4d555e;border-radius:12px;padding:14px;margin:18px 0;background:rgba(127,127,127,.07)}
+.ebro67-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:10px 0}
+.ebro67-grid label{font-size:12px;display:block}.ebro67-grid input,.ebro67-grid select{width:100%;min-width:0}
+.ebro67-table-wrap{overflow:auto;max-height:430px}.ebro67-table{width:100%;border-collapse:collapse;font-size:12px}
+.ebro67-table th,.ebro67-table td{border-bottom:1px solid #51545a;padding:8px;text-align:left;white-space:nowrap}
+.ebro67-table th{position:sticky;top:0;background:#292d32}.ebro67-note{font-size:12px;opacity:.8}
 </style>
 <style id="ebro-production-order-final">
 /* Control y producción: panel de terminados siempre al final. */
@@ -406,6 +414,8 @@ body:not(.factory-logged-out) #userPanel .secondary{background:#333b42;color:#ff
 <nav class="app-nav" aria-label="Navegación"><button type="button" class="nav-link active" data-target="vehicleSection">⊞ &nbsp; Registro de vehículos</button><button type="button" class="nav-link" data-target="dashboard">🚘 &nbsp; Vehículos</button><button type="button" class="nav-link" data-target="productionPanel" id="productionNav">▥ &nbsp; Control y producción</button><button type="button" class="nav-link" data-target="materialPanel" id="materialNav">📦 &nbsp; Material</button><button type="button" class="nav-link" data-target="workersPanel" id="workersNav">♙ &nbsp; Usuarios</button></nav>
 <div class="app-content"><section class="card" id="productionPanel" style="display:none">
 <h2>📊 Control y producción <span class="dashboard-subtitle">Consulta general · edición reservada a Manager y Jefe de Taller</span></h2>
+<section class="ebro67-box" id="ebro67Recovery"><h3>✓ Recuperaciones por turno · sin depender del reloj</h3><p class="ebro67-note">Hora calculada a partir de la última reparación registrada, solo para vehículos cuyos defectos están todos terminados. Si se cambia el estado manualmente sin reparar defectos, no se inventa una hora.</p><div class="ebro67-grid"><div><label>Turno</label><select id="ebro67Shift"><option value="all">Todos</option><option value="morning">Mañana · 05:45–14:00</option><option value="afternoon">Tarde · 14:00–22:15</option><option value="other">Fuera de turno</option></select></div><div><label>Recuperados en la fecha</label><strong id="ebro67RecoveryCount">—</strong></div></div><div class="ebro67-table-wrap" id="ebro67RecoveryList"></div></section>
+<section class="ebro67-box" id="ebro67TimeBox"><h3>◷ Historial de tiempos de reparación</h3><p class="ebro67-note">Datos reales de Supabase. La visibilidad de otros trabajadores depende de los permisos de tu cuenta.</p><div class="ebro67-grid"><div><label>Operario</label><input id="ebro67WorkerFilter" placeholder="Nombre"></div><div><label>Unidad</label><input id="ebro67UnitFilter" placeholder="Número de unidad"></div><div><label>Fecha</label><input id="ebro67TimeDate" type="date"></div><div><label>Turno de inicio</label><select id="ebro67TimeShift"><option value="all">Todos</option><option value="morning">Mañana</option><option value="afternoon">Tarde</option><option value="other">Fuera de turno</option></select></div></div><button type="button" class="secondary" id="ebro67TimeReload">↻ Actualizar tiempos</button><p id="ebro67TimeMessage" class="ebro67-note"></p><div id="ebro67TimeTotals"></div><div class="ebro67-table-wrap" id="ebro67TimeList"></div></section>
 <div class="prod-controls"><div><label for="prodDate">Fecha de consulta</label><input type="date" id="prodDate"></div><div><label for="prodGoal">Previsión de vehículos a reparar</label><input type="number" id="prodGoal" min="0" max="500" step="1" placeholder="Objetivo del día"></div><button type="button" id="prodSaveGoal">Guardar previsión</button><button type="button" id="prodReload" class="secondary">↻ Actualizar</button></div>
 <p id="prodMessage" class="muted" role="status" aria-live="polite">Selecciona una fecha para consultar la producción.</p>
 <div class="prod-metrics"><div class="prod-metric"><span>🚗 Total vehículos</span><strong id="prodTotal">—</strong></div><div class="prod-metric"><span>🟠 Previstos en el día</span><strong id="prodForecast">—</strong></div><div class="prod-metric"><span>🟢 Reparados en el día</span><strong id="prodRepaired">—</strong></div><div class="prod-metric"><span>🔴 Pendientes totales</span><strong id="prodPending">—</strong></div><div class="prod-metric"><span>✓ Terminados totales</span><strong id="prodFinished">—</strong></div><div class="prod-metric"><span>◎ Cumplimiento</span><strong id="prodRate">—</strong></div></div>
@@ -1282,6 +1292,55 @@ $('vehicleForm').addEventListener('submit',async e=>{
  }catch(err){msg('saveMessage','No se pudo completar el registro: '+err.message+'. Si la unidad ya se creó, vuelve a guardar para añadir los defectos pendientes; no se duplicará el vehículo.',true)}finally{$('saveBtn').disabled=false}
 });
 
+
+// 6.7: recuperación por último defecto registrado y tiempos por trabajador.
+// La hora de recuperación no depende de la tabla del reloj.
+function ebro67LocalParts(timestamp){
+ if(!timestamp)return null;
+ const d=new Date(timestamp);if(!Number.isFinite(d.getTime()))return null;
+ const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+ const o=Object.fromEntries(fmt.formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+ return {date:`${o.year}-${o.month}-${o.day}`,clock:`${o.hour}:${o.minute}:${o.second}`,minute:Number(o.hour)*60+Number(o.minute)};
+}
+function ebro67Shift(parts){if(!parts)return 'other';const n=parts.minute;return n>=345&&n<840?'morning':n>=840&&n<=1335?'afternoon':'other'}
+function ebro67ShiftName(v){return v==='morning'?'Mañana':v==='afternoon'?'Tarde':'Fuera de turno'}
+function ebro67Node(tag,value){const n=document.createElement(tag);if(value!==undefined)n.textContent=String(value);return n}
+function ebro67Table(rootId,headers,rows){const root=$(rootId);root.replaceChildren();if(!rows.length){root.append(ebro67Node('p','No hay registros para los filtros seleccionados.'));return}
+ const table=ebro67Node('table');table.className='ebro67-table';const head=ebro67Node('thead'),tr=ebro67Node('tr');for(const h of headers)tr.append(ebro67Node('th',h));head.append(tr);table.append(head);const body=ebro67Node('tbody');for(const cells of rows){const r=ebro67Node('tr');for(const v of cells)r.append(ebro67Node('td',v));body.append(r)}table.append(body);root.append(table)}
+function ebro67RecoveryRender(){
+ if(!prodState.loaded)return;
+ const date=$('prodDate').value,shift=$('ebro67Shift').value,items=[];
+ for(const v of records){const ds=defectosPorVehiculo[v.id]||[];if(!ds.length||!ds.every(d=>['Terminado','Reparado'].includes(d.estado)))continue;
+ const timestamp=prodState.lastRepairTimestamps?.get(String(v.id));const parts=ebro67LocalParts(timestamp);
+ if(!parts||parts.date!==date||(shift!=='all'&&ebro67Shift(parts)!==shift))continue;
+ items.push([v.bastidor||'—',v.modelo||'—',parts.clock,ebro67ShiftName(ebro67Shift(parts))]);
+ }
+ items.sort((a,b)=>a[2].localeCompare(b[2]));$('ebro67RecoveryCount').textContent=String(items.length);
+ ebro67Table('ebro67RecoveryList',['Unidad','Modelo','Hora de recuperación','Turno'],items);
+}
+const ebro67TimeState={rows:[]};
+function ebro67Ms(r){const end=r.finalizado_en?new Date(r.finalizado_en).getTime():r.pausado_en?new Date(r.pausado_en).getTime():Date.now();return Math.max(0,end-new Date(r.iniciado_en).getTime()-Number(r.pausa_ms||0))}
+function ebro67Duration(ms){const s=Math.floor(ms/1000);return `${Math.floor(s/3600)} h ${String(Math.floor(s%3600/60)).padStart(2,'0')} min ${String(s%60).padStart(2,'0')} s`}
+function ebro67RenderTimes(){
+ const worker=$('ebro67WorkerFilter').value.toLocaleLowerCase('es').trim(),unit=$('ebro67UnitFilter').value.toLocaleLowerCase('es').trim(),date=$('ebro67TimeDate').value,shift=$('ebro67TimeShift').value;
+ const units=new Map(records.map(v=>[String(v.id),v.bastidor||'—']));
+ const rows=ebro67TimeState.rows.filter(r=>{const p=ebro67LocalParts(r.iniciado_en);return (!worker||(repairNames[String(r.operario_id)]||'').toLocaleLowerCase('es').includes(worker))&&(!unit||(units.get(String(r.vehiculo_id))||'').toLocaleLowerCase('es').includes(unit))&&(!date||p?.date===date)&&(shift==='all'||ebro67Shift(p)===shift)});
+ const total=rows.reduce((s,r)=>s+ebro67Ms(r),0),pause=rows.reduce((s,r)=>s+Number(r.pausa_ms||0),0);
+ $('ebro67TimeTotals').textContent=`${rows.length} sesiones · Trabajo efectivo: ${ebro67Duration(total)} · Pausas registradas: ${ebro67Duration(pause)}`;
+ ebro67Table('ebro67TimeList',['Unidad','Operario','Inicio (Madrid)','Estado','Tiempo efectivo','Pausas'],rows.map(r=>{const p=ebro67LocalParts(r.iniciado_en);return [units.get(String(r.vehiculo_id))||String(r.vehiculo_id).slice(0,8),repairNames[String(r.operario_id)]||'Usuario '+String(r.operario_id).slice(0,8),p?`${p.date} ${p.clock}`:'—',r.estado,ebro67Duration(ebro67Ms(r)),ebro67Duration(Number(r.pausa_ms||0))]}));
+}
+async function ebro67LoadTimes(){
+ $('ebro67TimeMessage').textContent='Consultando sesiones…';
+ const {data,error}=await supabase.from('ebro_tiempos_reparacion').select('id,vehiculo_id,operario_id,estado,iniciado_en,pausado_en,finalizado_en,pausa_ms').order('iniciado_en',{ascending:false}).limit(5000);
+ if(error){$('ebro67TimeMessage').textContent='No se pueden consultar tiempos: '+error.message;return}
+ ebro67TimeState.rows=data||[];
+ $('ebro67TimeMessage').textContent='Sesiones visibles según permisos: '+ebro67TimeState.rows.length+'. Consulta limitada a las 5.000 más recientes.';
+ ebro67RenderTimes();
+}
+for(const id of ['ebro67WorkerFilter','ebro67UnitFilter','ebro67TimeDate','ebro67TimeShift'])$(id).addEventListener('input',ebro67RenderTimes);
+$('ebro67Shift').addEventListener('change',ebro67RecoveryRender);
+$('ebro67TimeReload').addEventListener('click',ebro67LoadTimes);
+
 // Producción 3.8: consulta datos reales; sin previsiones inventadas.
 const prodState={goals:[],daily:[],loaded:false};
 function localDay(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
@@ -1311,8 +1370,8 @@ async function loadProduction(){
   const lastDate=new Map(),lastRepairAuthors=new Map(),lastRepairTimestamp=new Map();for(const r of repResult.data||[]){const vid=defectById.get(String(r.defecto_id));if(!vid)continue;const day=prodDateOf(r.fecha);if(!day)continue;const previous=lastDate.get(vid);if(!previous||day>previous)lastDate.set(vid,day);if(!lastRepairTimestamp.has(vid)||String(r.fecha)>lastRepairTimestamp.get(vid)){lastRepairTimestamp.set(vid,String(r.fecha));lastRepairAuthors.set(vid,r.realizado_por||null)}}
   const count=new Map(),modelsByDate=new Map();
   for(const v of records){const ds=defectosPorVehiculo[v.id]||[];if(!ds.length||!ds.every(d=>d.estado==='Terminado'||d.estado==='Reparado'))continue;const day=lastDate.get(String(v.id));if(!day)continue;count.set(day,(count.get(day)||0)+1);const modelMap=modelsByDate.get(day)||new Map();modelMap.set(v.modelo||'Sin modelo',(modelMap.get(v.modelo||'Sin modelo')||0)+1);modelsByDate.set(day,modelMap)}
-  prodState.daily=count;prodState.models=modelsByDate;prodState.lastFinishedDates=lastDate;prodState.lastRepairAuthors=lastRepairAuthors;prodState.loaded=true;
-  renderProduction();msg('prodMessage','Datos actualizados. Las reparaciones se cuentan por vehículo, no por número de defectos.');
+  prodState.daily=count;prodState.models=modelsByDate;prodState.lastFinishedDates=lastDate;prodState.lastRepairAuthors=lastRepairAuthors;prodState.lastRepairTimestamps=lastRepairTimestamp;prodState.loaded=true;
+  renderProduction();ebro67RecoveryRender();await ebro67LoadTimes();msg('prodMessage','Datos actualizados. Las reparaciones se cuentan por vehículo, no por número de defectos.');
  }catch(err){prodState.loaded=false;msg('prodMessage',err.message,true);for(const id of ['prodBars','prodLine','prodModels','prodMonth','movementDaily','movementWeekly'])prodEmpty(id,'No hay datos disponibles.');}
 }
 function movementBuckets(date){
