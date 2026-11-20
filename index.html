@@ -373,6 +373,22 @@ body:not(.factory-logged-out) #userPanel .secondary{background:#333b42;color:#ff
 .ebro67-table-wrap{overflow:auto;max-height:430px}.ebro67-table{width:100%;border-collapse:collapse;font-size:12px}
 .ebro67-table th,.ebro67-table td{border-bottom:1px solid #51545a;padding:8px;text-align:left;white-space:nowrap}
 .ebro67-table th{position:sticky;top:0;background:#292d32}.ebro67-note{font-size:12px;opacity:.8}
+
+/* EBRO 6.7 — ficha de vehículo en pantalla completa */
+body.ebro-fullscreen-open{overflow:hidden}
+#ebroVehicleFullscreen{position:fixed;inset:0;z-index:9999;background:#17191c;color:#f6f6f6;overflow-y:auto;padding:18px}
+.ebro-fullscreen-inner{max-width:1500px;margin:auto;background:#2b2e32;border:1px solid #f28c00;border-radius:16px;padding:22px;min-height:calc(100vh - 36px)}
+.ebro-fullscreen-top{display:flex;justify-content:space-between;align-items:center;gap:15px;border-bottom:1px solid #686c71;padding-bottom:15px;margin-bottom:18px}
+.ebro-fullscreen-top h2{margin:0;color:#fff}.ebro-fullscreen-top .muted{color:#c6c9cc;margin:6px 0 0}
+.ebro-fullscreen-body{display:grid;gap:18px}.ebro-fullscreen-info{background:#393d42;border-radius:12px;padding:18px}
+.ebro-fullscreen-info .vehicle-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;color:#f1f1f1}
+.ebro-fullscreen-info .vehicle-meta b{color:#ffae3d}
+#ebroVehicleFullscreen .defect-panel,#ebroVehicleFullscreen .repair-history{background:#373b40;border:1px solid #585d63;border-radius:12px;padding:18px;margin:0;color:white}
+#ebroVehicleFullscreen .defect-item{color:#222;background:#f1f2f3}
+#ebroVehicleFullscreen .defect-add{color:#222}
+#ebroVehicleFullscreen .vehicle-actions{display:flex;flex-wrap:wrap;gap:9px}
+#ebroVehicleFullscreen .secondary{color:#242424;background:#e1e3e5}
+@media(max-width:700px){#ebroVehicleFullscreen{padding:0}.ebro-fullscreen-inner{border-radius:0;padding:14px;min-height:100vh}.ebro-fullscreen-top{align-items:flex-start}.ebro-fullscreen-top h2{font-size:19px}.ebro-fullscreen-info .vehicle-meta{grid-template-columns:1fr 1fr}}
 </style>
 <style id="ebro-production-order-final">
 /* Control y producción: panel de terminados siempre al final. */
@@ -411,7 +427,7 @@ body:not(.factory-logged-out) #userPanel .secondary{background:#333b42;color:#ff
   <div class="dark-login-bottom"><span>EBRO VEHICLE CONTROL</span><span>VERSIÓN 6.6</span></div></div>
 </section>
 <section id="app">
-<nav class="app-nav" aria-label="Navegación"><button type="button" class="nav-link active" data-target="vehicleSection">⊞ &nbsp; Registro de vehículos</button><button type="button" class="nav-link" data-target="dashboard">🚘 &nbsp; Vehículos</button><button type="button" class="nav-link" data-target="productionPanel" id="productionNav">▥ &nbsp; Control y producción</button><button type="button" class="nav-link" data-target="materialPanel" id="materialNav">📦 &nbsp; Material</button><button type="button" class="nav-link" data-target="workersPanel" id="workersNav">♙ &nbsp; Usuarios</button></nav>
+<nav class="app-nav" aria-label="Navegación"><button type="button" class="nav-link active" data-target="vehicleSection">⊞ &nbsp; Registro de vehículos</button><button type="button" class="nav-link" data-target="dashboard">🚘 &nbsp; Vehículos</button><button type="button" class="nav-link" data-target="materialPanel" id="materialNav">📦 &nbsp; Material</button><button type="button" class="nav-link" data-target="productionPanel" id="productionNav">▥ &nbsp; Producción por turno</button><button type="button" class="nav-link" data-target="workersPanel" id="workersNav">♙ &nbsp; Usuarios</button></nav>
 <div class="app-content"><section class="card" id="productionPanel" style="display:none">
 <h2>📊 Control y producción <span class="dashboard-subtitle">Consulta general · edición reservada a Manager y Jefe de Taller</span></h2>
 <section class="ebro67-box" id="ebro67Recovery"><h3>✓ Recuperaciones por turno · sin depender del reloj</h3><p class="ebro67-note">Hora calculada a partir de la última reparación registrada, solo para vehículos cuyos defectos están todos terminados. Si se cambia el estado manualmente sin reparar defectos, no se inventa una hora.</p><div class="ebro67-grid"><div><label>Turno</label><select id="ebro67Shift"><option value="all">Todos</option><option value="morning">Mañana · 05:45–14:00</option><option value="afternoon">Tarde · 14:00–22:15</option><option value="other">Fuera de turno</option></select></div><div><label>Recuperados en la fecha</label><strong id="ebro67RecoveryCount">—</strong></div></div><div class="ebro67-table-wrap" id="ebro67RecoveryList"></div></section>
@@ -928,12 +944,33 @@ function render(){
   if(canManageDefects){const statusBtn=el('button',v.estado==='Terminado'?'↩ Volver a Pendiente':'✓ Marcar Terminado','secondary');statusBtn.type='button';statusBtn.addEventListener('click',async()=>{const next=v.estado==='Terminado'?'Pendiente':'Terminado';if(!confirm('¿Cambiar el estado de '+v.bastidor+' a '+next+'?'))return;statusBtn.disabled=true;try{const {error}=await supabase.rpc('ebro_cambiar_estado_vehiculo',{p_vehiculo_id:v.id,p_estado:next});if(error)throw error;await load()}catch(e){alert('No se pudo cambiar el estado: '+e.message)}finally{statusBtn.disabled=false}});actions.append(statusBtn)}
   if(canDelete){const del=el('button','Eliminar','danger');del.type='button';del.addEventListener('click',()=>deleteVehicle(v));actions.append(del)}
   if(canEditProduction){const dateButton=el('button','📅 Corregir fechas','secondary');dateButton.type='button';dateButton.addEventListener('click',()=>openDateEditor(v,card));actions.append(dateButton)}
-   const details=document.createElement('details');details.className='vehicle-details';const summary=document.createElement('summary');summary.textContent='Gestionar defectos y vehículo';details.append(summary,crearPanelDefectos(v),makeRepairHistory(v),actions);card.append(details,ebroClockPanel(v));$('vehicles').append(card);
+   const details=document.createElement('details');details.className='vehicle-details';const summary=document.createElement('summary');summary.textContent='Abrir ficha del vehículo en pantalla completa';details.append(summary,crearPanelDefectos(v),makeRepairHistory(v),actions);card.append(details,ebroClockPanel(v));
+   summary.addEventListener('click',event=>{event.preventDefault();openVehicleFullscreen(v,card,details)});
+   $('vehicles').append(card);
  }
  const pagination=$('pagination');pagination.replaceChildren();
  if(pages>1){const prev=el('button','← Anterior');prev.disabled=currentPage===1;prev.addEventListener('click',()=>{currentPage--;render();showSection('dashboard')});pagination.append(prev)}
  pagination.append(el('span',`Página ${currentPage} de ${pages} · Mostrando ${filtered.length?((currentPage-1)*pageSize+1):0}–${Math.min(currentPage*pageSize,filtered.length)} de ${filtered.length}`,'muted'));
  if(pages>1){const next=el('button','Siguiente →');next.disabled=currentPage===pages;next.addEventListener('click',()=>{currentPage++;render();showSection('dashboard')});pagination.append(next)}
+}
+// EBRO 6.7: ficha independiente a pantalla completa, sin desplegar tarjetas.
+function openVehicleFullscreen(v,card,details){
+ document.getElementById('ebroVehicleFullscreen')?.remove();
+ const modal=document.createElement('section');modal.id='ebroVehicleFullscreen';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Ficha del vehículo '+(v.bastidor||''));
+ const inner=el('div',undefined,'ebro-fullscreen-inner');
+ const top=el('div',undefined,'ebro-fullscreen-top');
+ const heading=el('div');heading.append(el('h2','🚘 Ficha del vehículo · '+(v.bastidor||'—')),el('p',[v.modelo,v.acabado,v.color].filter(Boolean).join(' · '),'muted'));
+ const close=el('button','✕ Cerrar ficha','secondary');close.type='button';
+ const body=el('div',undefined,'ebro-fullscreen-body');
+ const info=el('div',undefined,'ebro-fullscreen-info');info.append(card.querySelector('.vehicle-top')?.cloneNode(true)||el('h3',v.bastidor||'Vehículo'),card.querySelector('.vehicle-meta')?.cloneNode(true)||el('div'));
+ const brief=card.querySelector('.defect-brief');if(brief)info.append(brief.cloneNode(true));
+ body.append(info);
+ const moved=Array.from(details.children).filter(node=>node!==details.querySelector('summary'));
+ moved.forEach(node=>body.append(node));
+ const clock=card.querySelector('.ebro-clock-panel');if(clock)body.append(clock);
+ const restore=()=>{moved.forEach(node=>details.append(node));if(clock)card.append(clock);modal.remove();document.body.classList.remove('ebro-fullscreen-open');document.removeEventListener('keydown',onKey);};
+ const onKey=e=>{if(e.key==='Escape')restore()};close.addEventListener('click',restore);document.addEventListener('keydown',onKey);
+ top.append(heading,close);inner.append(top,body);modal.append(inner);document.body.append(modal);document.body.classList.add('ebro-fullscreen-open');close.focus();
 }
 function localDateTimeValue(timestamp){if(!timestamp)return '';const d=new Date(timestamp);if(!Number.isFinite(d.getTime()))return '';const offset=d.getTimezoneOffset()*60000;return new Date(d.getTime()-offset).toISOString().slice(0,16)}
 function openDateEditor(v,card){
