@@ -390,8 +390,8 @@ body.ebro-fullscreen-open{overflow:hidden}
 #ebroVehicleFullscreen .secondary{color:#242424;background:#e1e3e5}
 @media(max-width:700px){#ebroVehicleFullscreen{padding:0}.ebro-fullscreen-inner{border-radius:0;padding:14px;min-height:100vh}.ebro-fullscreen-top{align-items:flex-start}.ebro-fullscreen-top h2{font-size:19px}.ebro-fullscreen-info .vehicle-meta{grid-template-columns:1fr 1fr}}
 
-/* Temporalmente desactivado: Control de producción hasta revisión */
-#productionPanel{display:none!important}
+/* Control de producción restaurado; el bloque de recuperaciones por turno queda desactivado. */
+#ebro67Recovery{display:none!important}
 </style>
 <style id="ebro-production-order-final">
 /* Control y producción: panel de terminados siempre al final. */
@@ -430,7 +430,7 @@ body.ebro-fullscreen-open{overflow:hidden}
   <div class="dark-login-bottom"><span>EBRO VEHICLE CONTROL</span><span>VERSIÓN 6.6</span></div></div>
 </section>
 <section id="app">
-<nav class="app-nav" aria-label="Navegación"><button type="button" class="nav-link active" data-target="vehicleSection">⊞ &nbsp; Registro de vehículos</button><button type="button" class="nav-link" data-target="dashboard">🚘 &nbsp; Vehículos</button><button type="button" class="nav-link" data-target="materialPanel" id="materialNav">📦 &nbsp; Material</button><button type="button" class="nav-link" data-target="workersPanel" id="workersNav">♙ &nbsp; Usuarios</button></nav>
+<nav class="app-nav" aria-label="Navegación"><button type="button" class="nav-link active" data-target="vehicleSection">⊞ &nbsp; Registro de vehículos</button><button type="button" class="nav-link" data-target="dashboard">🚘 &nbsp; Vehículos</button><button type="button" class="nav-link" data-target="productionPanel" id="productionNav">📊 &nbsp; Control de producción</button><button type="button" class="nav-link" data-target="materialPanel" id="materialNav">📦 &nbsp; Material</button><button type="button" class="nav-link" data-target="workersPanel" id="workersNav">♙ &nbsp; Usuarios</button></nav>
 <div class="app-content"><section class="card" id="productionPanel" style="display:none">
 <h2>📊 Control de producción <span class="dashboard-subtitle">Consulta general · edición reservada a Manager y Jefe de Taller</span></h2>
 <section class="ebro67-box" id="ebro67Recovery"><h3>✓ Recuperaciones por turno · sin depender del reloj</h3><p class="ebro67-note">Hora calculada a partir de la última reparación registrada, solo para vehículos cuyos defectos están todos terminados. Si se cambia el estado manualmente sin reparar defectos, no se inventa una hora.</p><div class="ebro67-grid"><div><label>Turno</label><select id="ebro67Shift"><option value="all">Todos</option><option value="morning">Mañana · 05:45–14:00</option><option value="afternoon">Tarde · 14:00–22:15</option><option value="other">Fuera de turno</option></select></div><div><label>Recuperados en la fecha</label><strong id="ebro67RecoveryCount">—</strong></div></div><div class="ebro67-table-wrap" id="ebro67RecoveryList"></div></section>
