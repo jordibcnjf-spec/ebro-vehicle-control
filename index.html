@@ -1148,7 +1148,7 @@ async function updateSession(){
   const username=String(session.user.user_metadata?.usuario||session.user.email?.split('@')[0]||'').toLowerCase();
   const displayName=username==='david.bergillos'?'David Bergillos · Manager':username==='jose.luis'?'Jose Luis · Jefe de Taller':(data.nombre||$('userEmail').textContent)+' · '+(role==='administrador'?'Administrador':role==='jefe_equipo'?'Jefe de equipo':role==='supervisor'?'Supervisor':role==='manager'?'Manager':role==='jefe_taller'?'Jefe de taller':'Operario');
   $('userEmail').textContent=displayName;
-  $('workersNav').style.display=canManageUsers?'block':'none';$('productionNav').style.display=role==='operario'?'none':'block';$('materialNav').style.display=role==='operario'?'none':'block';document.querySelector('[data-target="vehicleSection"]').style.display=role==='operario'&&!isPablo?'none':'block';showSection(role==='operario'?'dashboard':'vehicleSection');
+  $('workersNav').style.display=canManageUsers?'block':'none';if($('productionNav'))$('productionNav').style.display=role==='operario'?'none':'block';$('materialNav').style.display=role==='operario'?'none':'block';document.querySelector('[data-target="vehicleSection"]').style.display=role==='operario'&&!isPablo?'none':'block';showSection(role==='operario'?'dashboard':'vehicleSection');
  if(canManageUsers)listWorkers();
  canCreate=['administrador','manager','jefe_taller','supervisor','jefe_equipo'].includes(role)||isPablo;
  canDelete=role==='administrador';
