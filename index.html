@@ -392,6 +392,13 @@ body.ebro-fullscreen-open{overflow:hidden}
 
 /* Control de producción restaurado; el bloque de recuperaciones por turno queda desactivado. */
 #ebro67Recovery{display:none!important}
+
+/* EBRO 6.7 - legibilidad de etiquetas de filtros; sin cambios de estructura o logica */
+body:not(.factory-logged-out) #dashboard .extra-filters{background:#e8eaed!important;}
+body:not(.factory-logged-out) #dashboard .extra-filters label{color:#22272d!important;font-weight:750!important;text-shadow:none!important;}
+body:not(.factory-logged-out) #dashboard .extra-filters select,
+body:not(.factory-logged-out) #dashboard .extra-filters input{background:#22272d!important;color:#fff!important;border:1px solid #626a73!important;color-scheme:dark;}
+body:not(.factory-logged-out) #dashboard .extra-filters input::placeholder{color:#c4cbd2!important;opacity:1;}
 </style>
 <style id="ebro-production-order-final">
 /* Control y producción: panel de terminados siempre al final. */
